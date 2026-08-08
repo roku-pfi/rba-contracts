@@ -1,0 +1,37 @@
+# Default policy bundle — score→level / level→action (probability scale).
+# Loaded by decision-service; override per application_id under `applications`.
+policy_version: "1.0.0"
+
+defaults:
+  score_to_level:
+    - { max: 0.30, level: LOW }
+    - { max: 0.60, level: MEDIUM }
+    - { max: 0.80, level: HIGH }
+    - { max: 1.00, level: CRITICAL }
+  level_to_action:
+    LOW: ALLOW
+    MEDIUM: REQUIRE_MFA
+    HIGH: REAUTHENTICATE
+    CRITICAL: BLOCK
+  # Prefer challenge over silent allow when the scorer/profile store fails.
+  fallback_action: REQUIRE_MFA
+
+applications:
+  demo-banking-app:
+    sensitivity: high
+    # Tighter bands for a high-sensitivity demo app.
+    score_to_level:
+      - { max: 0.20, level: LOW }
+      - { max: 0.45, level: MEDIUM }
+      - { max: 0.70, level: HIGH }
+      - { max: 1.00, level: CRITICAL }
+    fallback_action: REQUIRE_MFA
+
+  demo-forum-app:
+    sensitivity: low
+    level_to_action:
+      LOW: ALLOW
+      MEDIUM: ALLOW
+      HIGH: REQUIRE_MFA
+      CRITICAL: BLOCK
+    fallback_action: ALLOW

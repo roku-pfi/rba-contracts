@@ -1,0 +1,25 @@
+{
+  "event_id": "4f9a8c2e-1b3d-4a6f-9c8e-2d1b3a6f9c8e",
+  "risk_score": 0.61,
+  "risk_level": "MEDIUM",
+  "action": "REQUIRE_MFA",
+  "reasons": [
+    {
+      "code": "signal_novel",
+      "signal": "device_type",
+      "contribution": 1.8,
+      "detail": "device_type not previously seen for this user"
+    },
+    {
+      "code": "signal_novel",
+      "signal": "ip_address",
+      "contribution": 1.2,
+      "detail": "ip_address not previously seen for this user"
+    }
+  ],
+  "model_version": "freeman-0.1.0",
+  "policy_version": "1.0.0",
+  "feature_schema_version": "1.0.0",
+  "fallback": false,
+  "scored_at": "2026-08-08T15:30:00.042Z"
+}

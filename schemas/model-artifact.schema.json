@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://roku-pfi.github.io/rba-contracts/schemas/model-artifact.schema.json",
+  "title": "ModelArtifactMetadata",
+  "description": "Sidecar metadata that MUST accompany every persisted model artifact. The binary blob (pickle today, MLflow later) is opaque; this JSON is the contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "model_id",
+    "model_version",
+    "model_family",
+    "input_kind",
+    "feature_schema_version",
+    "trained_at",
+    "framework"
+  ],
+  "properties": {
+    "model_id": {
+      "type": "string",
+      "description": "Stable logical id (e.g. 'freeman', 'logreg-baseline')."
+    },
+    "model_version": {
+      "type": "string",
+      "description": "Semver or training-run id exposed on /risk/evaluate responses."
+    },
+    "model_family": {
+      "type": "string",
+      "enum": ["freeman", "logreg", "random_forest", "lightgbm", "xgboost", "other"]
+    },
+    "input_kind": {
+      "type": "string",
+      "enum": ["freeman_categoricals", "feature_vector_v1"],
+      "description": "freeman_categoricals = raw event categoricals (+ derived hour). feature_vector_v1 = ordered FEATURE_NAMES vector from rba-features."
+    },
+    "feature_schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "freeman_features": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Required when input_kind=freeman_categoricals. Default: ip_address, asn, country, device_type, os, browser, hour."
+    },
+    "feature_names": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Required when input_kind=feature_vector_v1. Must equal FEATURE_NAMES order."
+    },
+    "hyperparameters": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "e.g. {\"alpha\": 0.5, \"beta\": 5.0} for Freeman."
+    },
+    "proba_mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "How native model output becomes risk_score in [0,1]. Required for freeman.",
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["identity", "logistic_logrisk", "platt", "isotonic", "other"]
+        },
+        "detail": { "type": "string" }
+      },
+      "required": ["method"]
+    },
+    "trained_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "train_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "start": { "type": "string", "format": "date-time" },
+        "end": { "type": "string", "format": "date-time" }
+      }
+    },
+    "framework": {
+      "type": "string",
+      "description": "Producer package/version, e.g. 'rba-ml-training/0.1.0'."
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional evaluation snapshot (ROC-AUC, recall@1%FPR, …)."
+    }
+  }
+}

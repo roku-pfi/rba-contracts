@@ -1,0 +1,34 @@
+{
+  "model_id": "freeman",
+  "model_version": "freeman-0.1.0",
+  "model_family": "freeman",
+  "input_kind": "freeman_categoricals",
+  "feature_schema_version": "1.0.0",
+  "freeman_features": [
+    "ip_address",
+    "asn",
+    "country",
+    "device_type",
+    "os",
+    "browser",
+    "hour"
+  ],
+  "hyperparameters": {
+    "alpha": 0.5,
+    "beta": 5.0
+  },
+  "proba_mapping": {
+    "method": "logistic_logrisk",
+    "detail": "risk_score = 1 / (1 + exp(-logrisk)); policy thresholds use risk_score."
+  },
+  "trained_at": "2026-08-08T18:00:00Z",
+  "train_window": {
+    "start": "2020-02-01T00:00:00Z",
+    "end": "2020-11-30T23:59:59Z"
+  },
+  "framework": "rba-ml-training/0.1.0",
+  "metrics": {
+    "roc_auc": 0.779,
+    "recall_at_1pct_fpr": 0.105
+  }
+}

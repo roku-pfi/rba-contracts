@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://roku-pfi.github.io/rba-contracts/schemas/policy-config.schema.json",
+  "title": "PolicyConfig",
+  "description": "Versioned score→level and level→action maps. Hot-reloadable config consumed by decision-service; never hard-coded in the scorer.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["policy_version", "defaults"],
+  "properties": {
+    "policy_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "defaults": {
+      "$ref": "#/$defs/policyBundle"
+    },
+    "applications": {
+      "type": "object",
+      "description": "Optional per-application_id overrides (app sensitivity).",
+      "additionalProperties": {
+        "$ref": "#/$defs/applicationOverride"
+      }
+    }
+  },
+  "$defs": {
+    "riskLevel": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+    },
+    "action": {
+      "type": "string",
+      "enum": ["ALLOW", "REQUIRE_MFA", "REAUTHENTICATE", "BLOCK"]
+    },
+    "scoreBand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max", "level"],
+      "properties": {
+        "max": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Inclusive upper bound of risk_score for this level. Bands must be sorted ascending and cover up to 1.0."
+        },
+        "level": { "$ref": "#/$defs/riskLevel" }
+      }
+    },
+    "policyBundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score_to_level", "level_to_action", "fallback_action"],
+      "properties": {
+        "score_to_level": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/scoreBand" }
+        },
+        "level_to_action": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+          "properties": {
+            "LOW": { "$ref": "#/$defs/action" },
+            "MEDIUM": { "$ref": "#/$defs/action" },
+            "HIGH": { "$ref": "#/$defs/action" },
+            "CRITICAL": { "$ref": "#/$defs/action" }
+          }
+        },
+        "fallback_action": {
+          "$ref": "#/$defs/action",
+          "description": "Action when the scorer/profile store fails. Prefer REQUIRE_MFA over ALLOW for demo/high-sensitivity apps."
+        }
+      }
+    },
+    "applicationOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sensitivity": {
+          "type": "string",
+          "enum": ["low", "standard", "high", "critical"]
+        },
+        "score_to_level": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/scoreBand" }
+        },
+        "level_to_action": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "LOW": { "$ref": "#/$defs/action" },
+            "MEDIUM": { "$ref": "#/$defs/action" },
+            "HIGH": { "$ref": "#/$defs/action" },
+            "CRITICAL": { "$ref": "#/$defs/action" }
+          }
+        },
+        "fallback_action": { "$ref": "#/$defs/action" }
+      }
+    }
+  }
+}

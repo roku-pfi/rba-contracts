@@ -1,0 +1,33 @@
+{
+  "event_id": "4f9a8c2e-1b3d-4a6f-9c8e-2d1b3a6f9c8e",
+  "occurred_at": "2026-08-08T15:30:00.042Z",
+  "application_id": "demo-banking-app",
+  "user_id": "user-123",
+  "risk_score": 0.61,
+  "risk_level": "MEDIUM",
+  "action": "REQUIRE_MFA",
+  "model_version": "freeman-0.1.0",
+  "policy_version": "1.0.0",
+  "feature_schema_version": "1.0.0",
+  "fallback": false,
+  "reasons": [
+    {
+      "code": "signal_novel",
+      "signal": "device_type",
+      "contribution": 1.8,
+      "detail": "device_type not previously seen for this user"
+    }
+  ],
+  "features": {
+    "user_login_count": 12,
+    "ip_seen_before": 0,
+    "asn_seen_before": 1,
+    "country_seen_before": 1,
+    "device_type_seen_before": 0,
+    "os_seen_before": 1,
+    "browser_seen_before": 1,
+    "hour_seen_before": 1,
+    "seconds_since_last_login": 86400,
+    "failed_logins_last_24h": 0
+  }
+}

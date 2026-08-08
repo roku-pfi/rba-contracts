@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://roku-pfi.github.io/rba-contracts/schemas/feature-vector.schema.json",
+  "title": "FeatureVectorV1",
+  "description": "Ordered feature vector produced by rba-features.compute_features. Names and order MUST match rba_features.features.FEATURE_NAMES. Version bumps when names/types/order change.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "user_login_count",
+    "ip_seen_before",
+    "asn_seen_before",
+    "country_seen_before",
+    "device_type_seen_before",
+    "os_seen_before",
+    "browser_seen_before",
+    "hour_seen_before",
+    "seconds_since_last_login",
+    "failed_logins_last_24h"
+  ],
+  "properties": {
+    "user_login_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Prior successful+attempt login count from ProfileState (excludes the current event)."
+    },
+    "ip_seen_before": {
+      "type": "integer",
+      "enum": [0, 1]
+    },
+    "asn_seen_before": {
+      "type": "integer",
+      "enum": [0, 1]
+    },
+    "country_seen_before": {
+      "type": "integer",
+      "enum": [0, 1]
+    },
+    "device_type_seen_before": {
+      "type": "integer",
+      "enum": [0, 1]
+    },
+    "os_seen_before": {
+      "type": "integer",
+      "enum": [0, 1]
+    },
+    "browser_seen_before": {
+      "type": "integer",
+      "enum": [0, 1]
+    },
+    "hour_seen_before": {
+      "type": "integer",
+      "enum": [0, 1],
+      "description": "Whether the current event's hour-of-day appears in the user's seen_hours."
+    },
+    "seconds_since_last_login": {
+      "type": "number",
+      "description": "Epoch delta to prior login. Sentinel -1.0 when the user has no prior login."
+    },
+    "failed_logins_last_24h": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of prior failed logins in the rolling 24h window ending at the current event timestamp."
+    }
+  },
+  "x-feature-schema-version": "1.0.0",
+  "x-feature-order": [
+    "user_login_count",
+    "ip_seen_before",
+    "asn_seen_before",
+    "country_seen_before",
+    "device_type_seen_before",
+    "os_seen_before",
+    "browser_seen_before",
+    "hour_seen_before",
+    "seconds_since_last_login",
+    "failed_logins_last_24h"
+  ],
+  "x-excluded-on-purpose": [
+    "rtt_deviation",
+    "impossible_travel",
+    "distance_from_last_login_km",
+    "is_attack_ip"
+  ]
+}

@@ -1,0 +1,145 @@
+asyncapi: 2.6.0
+info:
+  title: RBA Decision Events
+  version: 0.1.0
+  description: |
+    Events published from the decision-service transactional outbox to the bus
+    (RabbitMQ first). Consumers (profile-service, audit-service, …) MUST be
+    idempotent on `event_id`.
+defaultContentType: application/json
+channels:
+  rba.decision.made.v1:
+    description: A risk decision was persisted and is ready for async fan-out.
+    publish:
+      operationId: publishDecisionMade
+      summary: Emitted by event-publisher when draining the outbox
+      message:
+        $ref: "#/components/messages/DecisionMade"
+    subscribe:
+      operationId: consumeDecisionMade
+      summary: Consumed by profile-service, audit-service, analytics, …
+      message:
+        $ref: "#/components/messages/DecisionMade"
+components:
+  messages:
+    DecisionMade:
+      name: DecisionMade
+      title: Decision made
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/DecisionMadeEvent"
+      examples:
+        - name: requireMfa
+          payload:
+            event_id: "4f9a8c2e-1b3d-4a6f-9c8e-2d1b3a6f9c8e"
+            occurred_at: "2026-08-08T15:30:00.042Z"
+            application_id: "demo-banking-app"
+            user_id: "user-123"
+            risk_score: 0.61
+            risk_level: MEDIUM
+            action: REQUIRE_MFA
+            model_version: "freeman-0.1.0"
+            policy_version: "1.0.0"
+            feature_schema_version: "1.0.0"
+            fallback: false
+            reasons:
+              - code: signal_novel
+                signal: device_type
+                contribution: 1.8
+            features:
+              user_login_count: 12
+              ip_seen_before: 0
+              asn_seen_before: 1
+              country_seen_before: 1
+              device_type_seen_before: 0
+              os_seen_before: 1
+              browser_seen_before: 1
+              hour_seen_before: 1
+              seconds_since_last_login: 86400
+              failed_logins_last_24h: 0
+  schemas:
+    Action:
+      type: string
+      enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK]
+    RiskLevel:
+      type: string
+      enum: [LOW, MEDIUM, HIGH, CRITICAL]
+    Reason:
+      type: object
+      additionalProperties: false
+      required: [code, signal]
+      properties:
+        code: { type: string }
+        signal: { type: string }
+        contribution: { type: number }
+        detail: { type: string }
+    FeatureVectorV1:
+      type: object
+      description: Snapshot of the scored feature vector (FeatureVectorV1).
+      additionalProperties: false
+      required:
+        - user_login_count
+        - ip_seen_before
+        - asn_seen_before
+        - country_seen_before
+        - device_type_seen_before
+        - os_seen_before
+        - browser_seen_before
+        - hour_seen_before
+        - seconds_since_last_login
+        - failed_logins_last_24h
+      properties:
+        user_login_count: { type: integer, minimum: 0 }
+        ip_seen_before: { type: integer, enum: [0, 1] }
+        asn_seen_before: { type: integer, enum: [0, 1] }
+        country_seen_before: { type: integer, enum: [0, 1] }
+        device_type_seen_before: { type: integer, enum: [0, 1] }
+        os_seen_before: { type: integer, enum: [0, 1] }
+        browser_seen_before: { type: integer, enum: [0, 1] }
+        hour_seen_before: { type: integer, enum: [0, 1] }
+        seconds_since_last_login: { type: number }
+        failed_logins_last_24h: { type: integer, minimum: 0 }
+    DecisionMadeEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - event_id
+        - occurred_at
+        - application_id
+        - user_id
+        - risk_score
+        - risk_level
+        - action
+        - model_version
+        - policy_version
+        - feature_schema_version
+        - fallback
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          description: Same id as /risk/evaluate request — the idempotency key.
+        occurred_at:
+          type: string
+          format: date-time
+        application_id: { type: string }
+        user_id: { type: string }
+        risk_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        risk_level:
+          $ref: "#/components/schemas/RiskLevel"
+        action:
+          $ref: "#/components/schemas/Action"
+        model_version: { type: string }
+        policy_version: { type: string }
+        feature_schema_version: { type: string }
+        fallback: { type: boolean }
+        reasons:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reason"
+        features:
+          $ref: "#/components/schemas/FeatureVectorV1"
+          description: Optional scored vector for audit / offline replay.

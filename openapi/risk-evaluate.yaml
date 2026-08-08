@@ -1,0 +1,235 @@
+openapi: 3.1.0
+info:
+  title: RBA Decision Service — Risk Evaluate API
+  version: 0.1.0
+  description: |
+    PDP contract for the synchronous login path. Callers (PEP) authenticate the
+    user first, then POST here for a risk decision. The service *decides*; the
+    caller *enforces*.
+
+    Frozen in Phase 2 (`rba-contracts` v0.1.0). Implemented by `rba-decision-service`
+    in Phase 3.
+  contact:
+    name: roku-pfi
+    url: https://github.com/roku-pfi
+servers:
+  - url: http://localhost:8000
+    description: Local decision-service
+tags:
+  - name: risk
+    description: Login-risk evaluation
+paths:
+  /risk/evaluate:
+    post:
+      tags: [risk]
+      operationId: evaluateRisk
+      summary: Evaluate login risk and return an enforcement action
+      description: |
+        Stateless PDP call. The service loads the user profile (Redis), computes
+        features via `rba-features`, scores with the active model, applies the
+        versioned policy config, and returns action + explanation. Decision +
+        outbox row are written in one Postgres transaction (async fan-out is
+        off the request path).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RiskEvaluateRequest"
+            examples:
+              novelDevice:
+                $ref: "#/components/examples/EvaluateRequestNovelDevice"
+      responses:
+        "200":
+          description: Risk decision (including fallback decisions)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskEvaluateResponse"
+              examples:
+                requireMfa:
+                  $ref: "#/components/examples/EvaluateResponseRequireMfa"
+        "400":
+          description: Invalid request (schema / missing required fields)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Semantically invalid request (e.g. unparseable timestamp)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  schemas:
+    Action:
+      type: string
+      enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK]
+      description: Enforcement action for the PEP.
+    RiskLevel:
+      type: string
+      enum: [LOW, MEDIUM, HIGH, CRITICAL]
+    Reason:
+      type: object
+      additionalProperties: false
+      required: [code, signal]
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable reason code (e.g. signal_novel).
+          examples: [signal_novel, signal_familiar, failed_login_burst, low_history]
+        signal:
+          type: string
+          description: Feature or Freeman categorical this reason refers to.
+        contribution:
+          type: number
+          description: Signed contribution to risk when available.
+        detail:
+          type: string
+    RiskEvaluateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - event_id
+        - application_id
+        - user_id
+        - timestamp
+        - ip_address
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          description: Caller-supplied idempotency / correlation id. Reused on the outbox event.
+        application_id:
+          type: string
+          minLength: 1
+          description: Selects the policy bundle (app sensitivity overrides).
+        user_id:
+          type: string
+          minLength: 1
+        timestamp:
+          type: string
+          format: date-time
+          description: Login event time (UTC). Used for hour_seen_before and failed_logins window.
+        ip_address:
+          type: string
+          minLength: 1
+        asn:
+          type: string
+          description: Autonomous system number/id. Missing/"-" → not seen-before.
+        country:
+          type: string
+        device_type:
+          type: string
+        os:
+          type: string
+        browser:
+          type: string
+        login_successful:
+          type: boolean
+          default: true
+          description: |
+            Whether primary auth succeeded. Feeds profile failed_login_ts on update.
+            Typical PEP flow posts after successful password check (true).
+        user_agent:
+          type: string
+          description: Optional raw UA; not consumed by FeatureVectorV1.
+        device_id:
+          type: string
+          description: Optional stable device id; not consumed by FeatureVectorV1.
+      description: |
+        Fields mirror the Wiefling/canonical LoginEvent names used by rba-features
+        (see schema.RAW_TO_FIELD). Latitude/longitude and RTT are intentionally
+        omitted from v1 (EDA-excluded). is_attack_ip is never accepted here.
+    RiskEvaluateResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - event_id
+        - risk_score
+        - risk_level
+        - action
+        - reasons
+        - model_version
+        - policy_version
+        - feature_schema_version
+        - fallback
+        - scored_at
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        risk_score:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Probability-scale risk. Policy thresholds apply to this value.
+        risk_level:
+          $ref: "#/components/schemas/RiskLevel"
+        action:
+          $ref: "#/components/schemas/Action"
+        reasons:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reason"
+          description: Top contributing signals / rule hits for explainability.
+        model_version:
+          type: string
+        policy_version:
+          type: string
+        feature_schema_version:
+          type: string
+          examples: ["1.0.0"]
+        fallback:
+          type: boolean
+          description: true when score came from fallback_action (scorer/profile failure).
+        scored_at:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      additionalProperties: false
+      required: [detail]
+      properties:
+        detail:
+          type: string
+        event_id:
+          type: string
+          format: uuid
+  examples:
+    EvaluateRequestNovelDevice:
+      summary: Successful login from a new device
+      value:
+        event_id: "4f9a8c2e-1b3d-4a6f-9c8e-2d1b3a6f9c8e"
+        application_id: "demo-banking-app"
+        user_id: "user-123"
+        timestamp: "2026-08-08T15:30:00Z"
+        ip_address: "203.0.113.10"
+        asn: "13335"
+        country: "AR"
+        device_type: "mobile"
+        os: "Android"
+        browser: "Chrome"
+        login_successful: true
+    EvaluateResponseRequireMfa:
+      summary: Medium risk → REQUIRE_MFA
+      value:
+        event_id: "4f9a8c2e-1b3d-4a6f-9c8e-2d1b3a6f9c8e"
+        risk_score: 0.61
+        risk_level: MEDIUM
+        action: REQUIRE_MFA
+        reasons:
+          - code: signal_novel
+            signal: device_type
+            contribution: 1.8
+            detail: "device_type not previously seen for this user"
+          - code: signal_novel
+            signal: ip_address
+            contribution: 1.2
+            detail: "ip_address not previously seen for this user"
+        model_version: "freeman-0.1.0"
+        policy_version: "1.0.0"
+        feature_schema_version: "1.0.0"
+        fallback: false
+        scored_at: "2026-08-08T15:30:00.042Z"

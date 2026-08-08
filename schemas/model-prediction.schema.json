@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://roku-pfi.github.io/rba-contracts/schemas/model-prediction.schema.json",
+  "title": "ModelPrediction",
+  "description": "Unified scorer output consumed by the policy engine. Every model (Freeman primary or supervised baseline) MUST expose risk_score in [0, 1] via a predict_proba-compatible interface.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "risk_score",
+    "model_version",
+    "feature_schema_version",
+    "contributions"
+  ],
+  "properties": {
+    "risk_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Probability-scale risk in [0, 1]. Policy thresholds are defined on this scale. Freeman serving maps logrisk → [0,1] (documented in model artifact metadata)."
+    },
+    "logrisk": {
+      "type": ["number", "null"],
+      "description": "Native Freeman sum of per-feature LLRs. Null for models that do not produce logrisk."
+    },
+    "model_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "feature_schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Must match the feature-vector schema version the model was trained/served against (1.0.0 for FeatureVectorV1)."
+    },
+    "contributions": {
+      "type": "array",
+      "description": "Per-signal explanation terms. For Freeman: LLR contributions keyed by FREEMAN_FEATURES. For supervised models: SHAP or coefficient×value terms keyed by FEATURE_NAMES.",
+      "items": {
+        "$ref": "#/$defs/signalContribution"
+      }
+    }
+  },
+  "$defs": {
+    "signalContribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signal", "contribution"],
+      "properties": {
+        "signal": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contribution": {
+          "type": "number",
+          "description": "Signed contribution to risk (positive increases risk)."
+        },
+        "detail": {
+          "type": "string",
+          "description": "Optional human-readable note (e.g. 'IP not previously seen')."
+        }
+      }
+    }
+  }
+}

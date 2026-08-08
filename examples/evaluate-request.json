@@ -1,0 +1,13 @@
+{
+  "event_id": "4f9a8c2e-1b3d-4a6f-9c8e-2d1b3a6f9c8e",
+  "application_id": "demo-banking-app",
+  "user_id": "user-123",
+  "timestamp": "2026-08-08T15:30:00Z",
+  "ip_address": "203.0.113.10",
+  "asn": "13335",
+  "country": "AR",
+  "device_type": "mobile",
+  "os": "Android",
+  "browser": "Chrome",
+  "login_successful": true
+}
