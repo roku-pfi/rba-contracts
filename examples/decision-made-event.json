@@ -29,5 +29,15 @@
     "hour_seen_before": 1,
     "seconds_since_last_login": 86400,
     "failed_logins_last_24h": 0
+  },
+  "login": {
+    "login_timestamp": "2026-08-08T15:30:00Z",
+    "ip_address": "203.0.113.10",
+    "asn": "13335",
+    "country": "AR",
+    "device_type": "mobile",
+    "os": "Android",
+    "browser": "Chrome",
+    "login_successful": true
   }
 }

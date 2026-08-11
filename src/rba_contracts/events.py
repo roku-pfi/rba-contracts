@@ -14,6 +14,37 @@ from rba_contracts.features import FeatureVectorV1
 DECISION_MADE_CHANNEL = "rba.decision.made.v1"
 
 
+class LoginEventSnapshot(BaseModel):
+    """Raw login signals needed by profile-service to call update_profile.
+
+    Optional on DecisionMadeEvent for backward compatibility with Phase 2/3
+    payloads; Phase 4+ publishers SHOULD always set it.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    login_timestamp: datetime
+    ip_address: str = Field(min_length=1)
+    asn: str | None = None
+    country: str | None = None
+    device_type: str | None = None
+    os: str | None = None
+    browser: str | None = None
+    login_successful: bool = True
+
+    def to_feature_event(self) -> dict[str, object]:
+        return {
+            "login_timestamp": self.login_timestamp,
+            "ip_address": self.ip_address,
+            "asn": self.asn,
+            "country": self.country,
+            "device_type": self.device_type,
+            "os": self.os,
+            "browser": self.browser,
+            "login_successful": self.login_successful,
+        }
+
+
 class DecisionMadeEvent(BaseModel):
     """Outbox / bus payload. Consumers MUST be idempotent on event_id."""
 
@@ -32,3 +63,4 @@ class DecisionMadeEvent(BaseModel):
     fallback: bool = False
     reasons: list[Reason] = Field(default_factory=list)
     features: FeatureVectorV1 | None = None
+    login: LoginEventSnapshot | None = None
