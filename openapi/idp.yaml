@@ -1,0 +1,240 @@
+openapi: 3.1.0
+info:
+  title: RBA thin IdP — login API
+  version: 0.2.0
+  description: |
+    PEP contract. The IdP verifies identity, calls the PDP (`POST /risk/evaluate`),
+    and enforces ALLOW / MFA / REAUTH / BLOCK. Passwords never enter decision-service.
+
+    Frozen as `rba-contracts` 0.2.0 (ADR-0013 IdP-1). Implemented across IdP-2…4;
+    optional response fields stay unset until those stages.
+  contact:
+    name: roku-pfi
+    url: https://github.com/roku-pfi
+servers:
+  - url: http://localhost:8001
+    description: Local rba-idp
+tags:
+  - name: login
+    description: Credentials, MFA challenge, session
+paths:
+  /login:
+    post:
+      tags: [login]
+      operationId: login
+      summary: Verify credentials (and later, ask the PDP)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            examples:
+              demoUser:
+                $ref: "#/components/examples/LoginRequestDemo"
+      responses:
+        "200":
+          description: Outcome (including INVALID_CREDENTIALS — not an HTTP 401, so the client can branch on `outcome`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+              examples:
+                mfaRequired:
+                  $ref: "#/components/examples/LoginResponseMfa"
+        "400":
+          description: Invalid request
+  /mfa/verify:
+    post:
+      tags: [login]
+      operationId: verifyMfa
+      summary: Submit a mock OTP for an MFA / reauth challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MfaVerifyRequest"
+      responses:
+        "200":
+          description: Same shape as /login
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+  /session:
+    get:
+      tags: [login]
+      operationId: getSession
+      summary: Return the user for a valid session token
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+            description: "Bearer <token>"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          description: Missing or expired session
+  /logout:
+    post:
+      tags: [login]
+      operationId: logout
+      summary: Invalidate the current session
+      responses:
+        "204":
+          description: Session dropped (idempotent if already gone)
+components:
+  schemas:
+    LoginOutcome:
+      type: string
+      enum:
+        - AUTHENTICATED
+        - MFA_REQUIRED
+        - REAUTH_REQUIRED
+        - BLOCKED
+        - INVALID_CREDENTIALS
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, application_id, ip_address]
+      properties:
+        email:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+          description: Never echoed on responses.
+        application_id:
+          type: string
+          minLength: 1
+        ip_address:
+          type: string
+          minLength: 1
+        asn:
+          type: string
+        country:
+          type: string
+        device_type:
+          type: string
+        os:
+          type: string
+        browser:
+          type: string
+        user_agent:
+          type: string
+    SessionToken:
+      type: object
+      additionalProperties: false
+      required: [token, expires_at]
+      properties:
+        token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+    LoginResponse:
+      type: object
+      additionalProperties: false
+      required: [outcome]
+      properties:
+        outcome:
+          $ref: "#/components/schemas/LoginOutcome"
+        user_id:
+          type: string
+        event_id:
+          type: string
+          format: uuid
+          description: PDP correlation id (IdP-3+).
+        action:
+          type: string
+          enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK]
+        risk_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        risk_level:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        reasons:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [code, signal]
+            properties:
+              code: { type: string }
+              signal: { type: string }
+              contribution: { type: number }
+              detail: { type: string }
+        session:
+          $ref: "#/components/schemas/SessionToken"
+        challenge_id:
+          type: string
+          format: uuid
+        detail:
+          type: string
+    MfaVerifyRequest:
+      type: object
+      additionalProperties: false
+      required: [challenge_id, code]
+      properties:
+        challenge_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          minLength: 1
+    UserPublic:
+      type: object
+      additionalProperties: false
+      required: [user_id, email, created_at]
+      properties:
+        user_id: { type: string }
+        email: { type: string }
+        created_at:
+          type: string
+          format: date-time
+    SessionResponse:
+      type: object
+      additionalProperties: false
+      required: [user, expires_at]
+      properties:
+        user:
+          $ref: "#/components/schemas/UserPublic"
+        expires_at:
+          type: string
+          format: date-time
+  examples:
+    LoginRequestDemo:
+      value:
+        email: demo@example.com
+        password: demo-password
+        application_id: demo-banking-app
+        ip_address: "203.0.113.10"
+        asn: "13335"
+        country: AR
+        device_type: mobile
+        os: Android
+        browser: Chrome
+    LoginResponseMfa:
+      value:
+        outcome: MFA_REQUIRED
+        user_id: usr_01HZX
+        event_id: "4f9a8c2e-1b3d-4a6f-9c8e-2d1b3a6f9c8e"
+        action: REQUIRE_MFA
+        risk_score: 0.61
+        risk_level: MEDIUM
+        reasons:
+          - code: signal_novel
+            signal: device_type
+            contribution: 1.8
+            detail: device_type not previously seen for this user
+        challenge_id: "7c2e1b3d-4a6f-9c8e-2d1b-3a6f9c8e4f9a"

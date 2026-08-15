@@ -19,10 +19,11 @@ status / decisions live in the **`docs`** repo (`../docs`):
 
 ```
 openapi/risk-evaluate.yaml     # POST /risk/evaluate (PDP)
+openapi/idp.yaml               # POST /login, /mfa/verify, /session, /logout (PEP)
 asyncapi/decision-events.yaml  # rba.decision.made.v1 outbox/bus event
 schemas/                       # JSON Schema: features, model, policy
 examples/                      # canonical request/response/config samples
-src/rba_contracts/             # Pydantic models + apply_policy()
+src/rba_contracts/             # Pydantic models + apply_policy() + outcome_from_action()
 tests/test_contracts.py        # examples validate; FEATURE_NAMES parity guard
 ```
 

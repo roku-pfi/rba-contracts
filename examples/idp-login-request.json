@@ -1,0 +1,11 @@
+{
+  "email": "demo@example.com",
+  "password": "demo-password",
+  "application_id": "demo-banking-app",
+  "ip_address": "203.0.113.10",
+  "asn": "13335",
+  "country": "AR",
+  "device_type": "mobile",
+  "os": "Android",
+  "browser": "Chrome"
+}

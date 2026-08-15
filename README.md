@@ -5,13 +5,14 @@ Versioned **API / event / feature / model / policy** contracts for the RBA polyr
 **contract drift** between services — the counterpart of `rba-features` defeating
 train/serve skew.
 
-## What is frozen (v0.1.0 / Phase 2)
+## What is frozen (v0.1.0 PDP / v0.2.0 IdP)
 
 | Artifact | Path | Role |
 |---|---|---|
 | Feature schema | `schemas/feature-vector.schema.json` + `FeatureVectorV1` | Names, types, order (`FEATURE_NAMES`) |
 | Model I/O | `schemas/model-prediction.schema.json`, `model-artifact.schema.json` | `predict_proba`-compatible score + artifact metadata |
 | PDP API | `openapi/risk-evaluate.yaml` | `POST /risk/evaluate` |
+| IdP API | `openapi/idp.yaml` | `POST /login`, `/mfa/verify`, `/session`, `/logout` (v0.2.0) |
 | Bus event | `asyncapi/decision-events.yaml` | `rba.decision.made.v1` (outbox / `event_id`) |
 | Policy config | `schemas/policy-config.schema.json` + `examples/policy-config.yaml` | score→level / level→action |
 
@@ -48,4 +49,4 @@ pytest -k feature_names_match
 
 ## Status
 
-Phase 2 freeze. Roadmap: `../docs/plans/status.md`.
+Phase 2 PDP freeze + IdP-1 login contracts (0.2.0). Roadmap: `../docs/plans/status.md`.

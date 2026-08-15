@@ -1,4 +1,4 @@
-"""Versioned RBA contracts (feature schema, model I/O, PDP API, events, policy)."""
+"""Versioned RBA contracts (feature schema, model I/O, PDP API, IdP API, events, policy)."""
 
 from rba_contracts.enums import Action, RiskLevel
 from rba_contracts.evaluate import Reason, RiskEvaluateRequest, RiskEvaluateResponse
@@ -9,6 +9,16 @@ from rba_contracts.model import (
     ModelArtifactMetadata,
     ModelPrediction,
     SignalContribution,
+)
+from rba_contracts.idp import (
+    LoginOutcome,
+    LoginRequest,
+    LoginResponse,
+    MfaVerifyRequest,
+    SessionResponse,
+    SessionToken,
+    UserPublic,
+    outcome_from_action,
 )
 from rba_contracts.policy import PolicyConfig, apply_policy
 
@@ -23,13 +33,21 @@ __all__ = [
     "LoginEventSnapshot",
     "ModelArtifactMetadata",
     "ModelPrediction",
+    "LoginOutcome",
+    "LoginRequest",
+    "LoginResponse",
+    "MfaVerifyRequest",
     "PolicyConfig",
     "Reason",
     "RiskEvaluateRequest",
     "RiskEvaluateResponse",
     "RiskLevel",
+    "SessionResponse",
+    "SessionToken",
     "SignalContribution",
+    "UserPublic",
     "apply_policy",
+    "outcome_from_action",
 ]
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"

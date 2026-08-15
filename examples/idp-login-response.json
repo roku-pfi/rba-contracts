@@ -1,0 +1,17 @@
+{
+  "outcome": "MFA_REQUIRED",
+  "user_id": "usr_01HZX",
+  "event_id": "4f9a8c2e-1b3d-4a6f-9c8e-2d1b3a6f9c8e",
+  "action": "REQUIRE_MFA",
+  "risk_score": 0.61,
+  "risk_level": "MEDIUM",
+  "reasons": [
+    {
+      "code": "signal_novel",
+      "signal": "device_type",
+      "contribution": 1.8,
+      "detail": "device_type not previously seen for this user"
+    }
+  ],
+  "challenge_id": "7c2e1b3d-4a6f-9c8e-2d1b-3a6f9c8e4f9a"
+}

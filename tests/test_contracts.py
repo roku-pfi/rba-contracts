@@ -16,12 +16,18 @@ from rba_contracts import (
     Action,
     DecisionMadeEvent,
     FeatureVectorV1,
+    LoginOutcome,
+    LoginRequest,
+    LoginResponse,
+    MfaVerifyRequest,
     ModelArtifactMetadata,
     PolicyConfig,
     RiskEvaluateRequest,
     RiskEvaluateResponse,
     RiskLevel,
+    SessionResponse,
     apply_policy,
+    outcome_from_action,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -146,3 +152,38 @@ def test_feature_names_match_rba_features_when_installed() -> None:
     from rba_features.features import FEATURE_NAMES as impl_names
 
     assert tuple(impl_names) == FEATURE_NAMES
+
+
+def test_idp_login_examples_roundtrip() -> None:
+    req = LoginRequest.model_validate(_load_json("idp-login-request.json"))
+    assert req.email == "demo@example.com"
+    assert "password" in LoginRequest.model_fields
+    assert "password" not in LoginResponse.model_fields
+
+    resp = LoginResponse.model_validate(_load_json("idp-login-response.json"))
+    assert resp.outcome == LoginOutcome.MFA_REQUIRED
+    assert resp.action == Action.REQUIRE_MFA
+    assert resp.session is None
+    assert resp.challenge_id is not None
+
+    mfa = MfaVerifyRequest.model_validate(_load_json("idp-mfa-verify-request.json"))
+    assert mfa.code == "000000"
+
+    session = SessionResponse.model_validate(_load_json("idp-session-response.json"))
+    assert session.user.email == "demo@example.com"
+
+
+def test_outcome_from_action() -> None:
+    assert outcome_from_action(Action.ALLOW) == LoginOutcome.AUTHENTICATED
+    assert outcome_from_action(Action.REQUIRE_MFA) == LoginOutcome.MFA_REQUIRED
+    assert outcome_from_action(Action.REAUTHENTICATE) == LoginOutcome.REAUTH_REQUIRED
+    assert outcome_from_action(Action.BLOCK) == LoginOutcome.BLOCKED
+
+
+def test_idp_login_response_allows_identity_only_stub() -> None:
+    """IdP-2 may answer without PDP fields."""
+    resp = LoginResponse(outcome=LoginOutcome.INVALID_CREDENTIALS)
+    assert resp.user_id is None
+    assert resp.action is None
+    dumped = resp.model_dump()
+    assert "password" not in dumped
