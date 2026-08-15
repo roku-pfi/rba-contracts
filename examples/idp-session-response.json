@@ -2,7 +2,8 @@
   "user": {
     "user_id": "usr_01HZX",
     "email": "demo@example.com",
-    "created_at": "2026-08-15T12:00:00Z"
+    "created_at": "2026-08-15T12:00:00Z",
+    "is_admin": false
   },
   "expires_at": "2026-08-15T20:00:00Z"
 }

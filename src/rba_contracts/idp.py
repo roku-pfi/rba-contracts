@@ -96,6 +96,7 @@ class UserPublic(BaseModel):
     user_id: str = Field(min_length=1)
     email: str = Field(min_length=1)
     created_at: datetime
+    is_admin: bool = False
 
 
 class SessionResponse(BaseModel):

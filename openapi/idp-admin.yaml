@@ -1,0 +1,369 @@
+openapi: 3.1.0
+info:
+  title: RBA IdP — admin API
+  version: 0.3.0
+  description: |
+    IdP-6 control-plane API served by `rba-idp` at `/admin/api/*`.
+    Users and applications are owned by the IdP DB. Decisions are proxied
+    from `rba-audit-service`. Policy is proxied from `rba-decision-service`
+    (`GET`/`PUT /policy`). All routes require a Bearer session for a user
+    with `is_admin=true`. Groups stay IdP-7.
+  contact:
+    name: roku-pfi
+    url: https://github.com/roku-pfi
+servers:
+  - url: http://localhost:8001
+    description: Local rba-idp
+tags:
+  - name: admin
+    description: Users, applications, decision browser, policy
+paths:
+  /admin/api/users:
+    get:
+      tags: [admin]
+      operationId: listUsers
+      summary: List directory users (no password hashes)
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUserPublic"
+        "401":
+          description: Missing or expired session
+        "403":
+          description: Session is not an admin
+    post:
+      tags: [admin]
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+            examples:
+              analyst:
+                $ref: "#/components/examples/CreateUser"
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUserPublic"
+        "409":
+          description: Email already exists
+  /admin/api/users/{user_id}:
+    patch:
+      tags: [admin]
+      operationId: patchUser
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchUserRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUserPublic"
+        "404":
+          description: Unknown user
+  /admin/api/applications:
+    get:
+      tags: [admin]
+      operationId: listApplications
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationPublic"
+    post:
+      tags: [admin]
+      operationId: createApplication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApplicationRequest"
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationPublic"
+        "409":
+          description: application_id already exists
+  /admin/api/applications/{application_id}:
+    patch:
+      tags: [admin]
+      operationId: patchApplication
+      parameters:
+        - in: path
+          name: application_id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchApplicationRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationPublic"
+        "404":
+          description: Unknown application
+  /admin/api/decisions:
+    get:
+      tags: [admin]
+      operationId: listDecisions
+      summary: Decision browser (score, action, reasons)
+      parameters:
+        - in: query
+          name: user_id
+          schema: { type: string }
+        - in: query
+          name: application_id
+          schema: { type: string }
+        - in: query
+          name: action
+          schema:
+            type: string
+            enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK]
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionListResponse"
+        "503":
+          description: Audit store unavailable
+  /admin/api/decisions/{event_id}:
+    get:
+      tags: [admin]
+      operationId: getDecision
+      parameters:
+        - in: path
+          name: event_id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionRecord"
+        "404":
+          description: Unknown event
+        "503":
+          description: Audit store unavailable
+  /admin/api/policy:
+    get:
+      tags: [admin]
+      operationId: getPolicy
+      summary: Active PDP policy (score bands + level→action)
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyConfig"
+        "503":
+          description: PDP unavailable
+    put:
+      tags: [admin]
+      operationId: putPolicy
+      summary: Replace the active PDP policy (hot-applied)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyConfig"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyConfig"
+        "422":
+          description: Invalid policy (unsorted bands / missing max=1.0)
+        "503":
+          description: PDP unavailable
+components:
+  schemas:
+    AdminUserPublic:
+      type: object
+      additionalProperties: false
+      required: [user_id, email, enabled, is_admin, created_at]
+      properties:
+        user_id: { type: string }
+        email: { type: string }
+        enabled: { type: boolean }
+        is_admin: { type: boolean }
+        created_at: { type: string, format: date-time }
+    CreateUserRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email: { type: string, minLength: 1 }
+        password: { type: string, minLength: 1 }
+        is_admin: { type: boolean, default: false }
+    PatchUserRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled: { type: boolean }
+        is_admin: { type: boolean }
+        password: { type: string, minLength: 1 }
+    ApplicationPublic:
+      type: object
+      additionalProperties: false
+      required: [application_id, name, enabled, created_at]
+      properties:
+        application_id: { type: string }
+        name: { type: string }
+        enabled: { type: boolean }
+        created_at: { type: string, format: date-time }
+    CreateApplicationRequest:
+      type: object
+      additionalProperties: false
+      required: [application_id, name]
+      properties:
+        application_id: { type: string }
+        name: { type: string }
+    PatchApplicationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string }
+        enabled: { type: boolean }
+    Reason:
+      type: object
+      additionalProperties: false
+      required: [code, signal]
+      properties:
+        code: { type: string }
+        signal: { type: string }
+        contribution: { type: number }
+        detail: { type: string }
+    DecisionRecord:
+      type: object
+      additionalProperties: false
+      required:
+        - event_id
+        - occurred_at
+        - application_id
+        - user_id
+        - risk_score
+        - risk_level
+        - action
+        - model_version
+        - policy_version
+        - feature_schema_version
+      properties:
+        event_id: { type: string, format: uuid }
+        occurred_at: { type: string, format: date-time }
+        application_id: { type: string }
+        user_id: { type: string }
+        risk_score: { type: number, minimum: 0, maximum: 1 }
+        risk_level: { type: string, enum: [LOW, MEDIUM, HIGH, CRITICAL] }
+        action: { type: string, enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK] }
+        reasons:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reason"
+        model_version: { type: string }
+        policy_version: { type: string }
+        feature_schema_version: { type: string }
+        fallback: { type: boolean, default: false }
+    DecisionListResponse:
+      type: object
+      additionalProperties: false
+      required: [items, count]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DecisionRecord"
+        count: { type: integer, minimum: 0 }
+    ScoreBand:
+      type: object
+      additionalProperties: false
+      required: [max, level]
+      properties:
+        max: { type: number, minimum: 0, maximum: 1 }
+        level: { type: string, enum: [LOW, MEDIUM, HIGH, CRITICAL] }
+    LevelToAction:
+      type: object
+      additionalProperties: false
+      required: [LOW, MEDIUM, HIGH, CRITICAL]
+      properties:
+        LOW: { type: string, enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK] }
+        MEDIUM: { type: string, enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK] }
+        HIGH: { type: string, enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK] }
+        CRITICAL: { type: string, enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK] }
+    PolicyBundle:
+      type: object
+      additionalProperties: false
+      required: [score_to_level, level_to_action, fallback_action]
+      properties:
+        score_to_level:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ScoreBand"
+        level_to_action:
+          $ref: "#/components/schemas/LevelToAction"
+        fallback_action: { type: string, enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK] }
+    ApplicationOverride:
+      type: object
+      additionalProperties: false
+      properties:
+        sensitivity: { type: string, enum: [low, standard, high, critical] }
+        score_to_level:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoreBand"
+        level_to_action:
+          $ref: "#/components/schemas/LevelToAction"
+        fallback_action: { type: string, enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK] }
+    PolicyConfig:
+      type: object
+      additionalProperties: false
+      required: [policy_version, defaults]
+      properties:
+        policy_version: { type: string, minLength: 1 }
+        defaults:
+          $ref: "#/components/schemas/PolicyBundle"
+        applications:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/ApplicationOverride"
+  examples:
+    CreateUser:
+      value:
+        email: analyst@example.com
+        password: analyst-password
+        is_admin: false

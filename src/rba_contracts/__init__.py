@@ -1,5 +1,15 @@
 """Versioned RBA contracts (feature schema, model I/O, PDP API, IdP API, events, policy)."""
 
+from rba_contracts.admin import (
+    AdminUserPublic,
+    ApplicationPublic,
+    CreateApplicationRequest,
+    CreateUserRequest,
+    DecisionListResponse,
+    DecisionRecord,
+    PatchApplicationRequest,
+    PatchUserRequest,
+)
 from rba_contracts.enums import Action, RiskLevel
 from rba_contracts.evaluate import Reason, RiskEvaluateRequest, RiskEvaluateResponse
 from rba_contracts.events import DECISION_MADE_CHANNEL, DecisionMadeEvent, LoginEventSnapshot
@@ -28,7 +38,13 @@ __all__ = [
     "FEATURE_SCHEMA_VERSION",
     "FREEMAN_FEATURES",
     "Action",
+    "AdminUserPublic",
+    "ApplicationPublic",
+    "CreateApplicationRequest",
+    "CreateUserRequest",
+    "DecisionListResponse",
     "DecisionMadeEvent",
+    "DecisionRecord",
     "FeatureVectorV1",
     "LoginEventSnapshot",
     "ModelArtifactMetadata",
@@ -37,6 +53,8 @@ __all__ = [
     "LoginRequest",
     "LoginResponse",
     "MfaVerifyRequest",
+    "PatchApplicationRequest",
+    "PatchUserRequest",
     "PolicyConfig",
     "Reason",
     "RiskEvaluateRequest",
@@ -50,4 +68,4 @@ __all__ = [
     "outcome_from_action",
 ]
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

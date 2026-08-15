@@ -1,0 +1,5 @@
+{
+  "email": "analyst@example.com",
+  "password": "analyst-password",
+  "is_admin": false
+}

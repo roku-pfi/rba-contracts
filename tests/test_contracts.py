@@ -14,13 +14,18 @@ from rba_contracts import (
     FEATURE_SCHEMA_VERSION,
     FREEMAN_FEATURES,
     Action,
+    AdminUserPublic,
+    ApplicationPublic,
+    CreateUserRequest,
     DecisionMadeEvent,
+    DecisionRecord,
     FeatureVectorV1,
     LoginOutcome,
     LoginRequest,
     LoginResponse,
     MfaVerifyRequest,
     ModelArtifactMetadata,
+    PatchUserRequest,
     PolicyConfig,
     RiskEvaluateRequest,
     RiskEvaluateResponse,
@@ -171,6 +176,26 @@ def test_idp_login_examples_roundtrip() -> None:
 
     session = SessionResponse.model_validate(_load_json("idp-session-response.json"))
     assert session.user.email == "demo@example.com"
+    assert session.user.is_admin is False
+
+
+def test_admin_examples_roundtrip() -> None:
+    user = AdminUserPublic.model_validate(_load_json("admin-user.json"))
+    assert user.is_admin is True
+    assert "password" not in AdminUserPublic.model_fields
+
+    app = ApplicationPublic.model_validate(_load_json("admin-application.json"))
+    assert app.application_id == "demo-banking-app"
+
+    created = CreateUserRequest.model_validate(_load_json("admin-create-user.json"))
+    assert created.is_admin is False
+
+    decision = DecisionRecord.model_validate(_load_json("admin-decision.json"))
+    assert decision.action == Action.REQUIRE_MFA
+    assert decision.reasons[0].signal == "device_type"
+
+    with pytest.raises(Exception):
+        PatchUserRequest.model_validate({})
 
 
 def test_outcome_from_action() -> None:

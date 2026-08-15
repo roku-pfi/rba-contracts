@@ -4,9 +4,10 @@ Versioned **API / event / feature / model / policy** contracts for the RBA
 polyrepo. This library exists to defeat **contract drift** between services —
 the counterpart of `rba-features` defeating train/serve skew.
 
-Package version: **0.2.0** (IdP login API). PDP / feature / policy freeze was
-**v0.1.0** ([ADR-0008](../docs/decisions/0008-contracts-freeze.md));
-`LoginEventSnapshot` landed in **v0.1.1** for profile-service.
+Package version: **0.3.0** (IdP-6 admin + policy GET/PUT + audit read).
+PDP / feature / policy freeze was **v0.1.0**
+([ADR-0008](../docs/decisions/0008-contracts-freeze.md));
+`LoginEventSnapshot` landed in **v0.1.1**; IdP login API in **v0.2.0**.
 
 YAML/JSON Schema files are the language-neutral source of truth. Executable
 Pydantic models under `src/rba_contracts/` are what Python services import.
@@ -19,8 +20,10 @@ Pydantic models under `src/rba_contracts/` are what Python services import.
 |---|---|---|
 | Feature schema | `schemas/feature-vector.schema.json` + `FeatureVectorV1` | Names, types, order (`FEATURE_NAMES`) |
 | Model I/O | `schemas/model-prediction.schema.json`, `model-artifact.schema.json` | `predict_proba`-compatible score + artifact metadata |
-| PDP API | `openapi/risk-evaluate.yaml` | `POST /risk/evaluate` |
+| PDP API | `openapi/risk-evaluate.yaml` | `POST /risk/evaluate`, `GET`/`PUT /policy` |
 | IdP API | `openapi/idp.yaml` | `POST /login`, `/mfa/verify`, `GET /session`, `POST /logout` |
+| IdP admin | `openapi/idp-admin.yaml` | `/admin/api` users, apps, decisions, policy |
+| Audit read | `openapi/audit.yaml` | `GET /decisions` (IdP-6 decision browser) |
 | Bus event | `asyncapi/decision-events.yaml` | `rba.decision.made.v1` (outbox / `event_id`) |
 | Policy config | `schemas/policy-config.schema.json` + `examples/policy-config.yaml` | score→level / level→action |
 
@@ -31,8 +34,10 @@ Canonical JSON examples live in `examples/` and are validated by
 
 ```
 openapi/
-├── risk-evaluate.yaml     # PDP
-└── idp.yaml               # PEP
+├── risk-evaluate.yaml     # PDP (+ GET/PUT /policy)
+├── idp.yaml               # PEP login
+├── idp-admin.yaml         # IdP-6 admin BFF
+└── audit.yaml             # audit-service decision read API
 asyncapi/
 └── decision-events.yaml
 schemas/                   # JSON Schema
@@ -44,7 +49,8 @@ src/rba_contracts/
 ├── evaluate.py            # RiskEvaluateRequest / Response, Reason
 ├── policy.py              # PolicyConfig, apply_policy()
 ├── events.py              # DecisionMadeEvent, LoginEventSnapshot
-└── idp.py                 # LoginRequest/Response, session, MFA, outcome_from_action
+├── idp.py                 # LoginRequest/Response, session, MFA, outcome_from_action
+└── admin.py               # AdminUserPublic, ApplicationPublic, DecisionRecord
 tests/test_contracts.py
 ```
 

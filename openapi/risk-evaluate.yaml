@@ -7,8 +7,8 @@ info:
     user first, then POST here for a risk decision. The service *decides*; the
     caller *enforces*.
 
-    Frozen in Phase 2 (`rba-contracts` v0.1.0). Implemented by `rba-decision-service`
-    in Phase 3.
+    Evaluate path frozen in Phase 2 (`rba-contracts` v0.1.0). `GET`/`PUT /policy`
+    is additive in 0.3.0 (IdP-6 admin). Implemented by `rba-decision-service`.
   contact:
     name: roku-pfi
     url: https://github.com/roku-pfi
@@ -18,7 +18,43 @@ servers:
 tags:
   - name: risk
     description: Login-risk evaluation
+  - name: policy
+    description: Versioned score→level / level→action config (IdP-6)
 paths:
+  /policy:
+    get:
+      tags: [policy]
+      operationId: getPolicy
+      summary: Return the active PolicyConfig
+      responses:
+        "200":
+          description: Current score→level / level→action bundle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyConfig"
+    put:
+      tags: [policy]
+      operationId: putPolicy
+      summary: Replace the active PolicyConfig (in-process + YAML persist)
+      description: |
+        Control-plane write used by the IdP-6 admin console. The next
+        `/risk/evaluate` uses the new bundle. Identity never lives here.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyConfig"
+      responses:
+        "200":
+          description: Policy now active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyConfig"
+        "422":
+          description: Invalid policy (unsorted bands / missing max=1.0)
   /risk/evaluate:
     post:
       tags: [risk]
@@ -187,6 +223,61 @@ components:
         scored_at:
           type: string
           format: date-time
+    ScoreBand:
+      type: object
+      additionalProperties: false
+      required: [max, level]
+      properties:
+        max: { type: number, minimum: 0, maximum: 1 }
+        level: { $ref: "#/components/schemas/RiskLevel" }
+    LevelToAction:
+      type: object
+      additionalProperties: false
+      required: [LOW, MEDIUM, HIGH, CRITICAL]
+      properties:
+        LOW: { $ref: "#/components/schemas/Action" }
+        MEDIUM: { $ref: "#/components/schemas/Action" }
+        HIGH: { $ref: "#/components/schemas/Action" }
+        CRITICAL: { $ref: "#/components/schemas/Action" }
+    PolicyBundle:
+      type: object
+      additionalProperties: false
+      required: [score_to_level, level_to_action, fallback_action]
+      properties:
+        score_to_level:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ScoreBand"
+        level_to_action:
+          $ref: "#/components/schemas/LevelToAction"
+        fallback_action:
+          $ref: "#/components/schemas/Action"
+    ApplicationOverride:
+      type: object
+      additionalProperties: false
+      properties:
+        sensitivity: { type: string, enum: [low, standard, high, critical] }
+        score_to_level:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoreBand"
+        level_to_action:
+          $ref: "#/components/schemas/LevelToAction"
+        fallback_action:
+          $ref: "#/components/schemas/Action"
+    PolicyConfig:
+      type: object
+      additionalProperties: false
+      required: [policy_version, defaults]
+      properties:
+        policy_version: { type: string, minLength: 1 }
+        defaults:
+          $ref: "#/components/schemas/PolicyBundle"
+        applications:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/ApplicationOverride"
     Error:
       type: object
       additionalProperties: false

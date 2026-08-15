@@ -6,8 +6,8 @@ info:
     PEP contract. The IdP verifies identity, calls the PDP (`POST /risk/evaluate`),
     and enforces ALLOW / MFA / REAUTH / BLOCK. Passwords never enter decision-service.
 
-    Frozen as `rba-contracts` 0.2.0 (ADR-0013 IdP-1). Implemented across IdP-2…4;
-    optional response fields stay unset until those stages.
+    Login API frozen as `rba-contracts` 0.2.0 (ADR-0013 IdP-1). Admin API is
+    additive in 0.3.0 (`openapi/idp-admin.yaml`).
   contact:
     name: roku-pfi
     url: https://github.com/roku-pfi
@@ -202,6 +202,10 @@ components:
         created_at:
           type: string
           format: date-time
+        is_admin:
+          type: boolean
+          default: false
+          description: IdP-6. True for seeded admin; not a groups system.
     SessionResponse:
       type: object
       additionalProperties: false

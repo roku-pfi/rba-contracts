@@ -1,0 +1,7 @@
+{
+  "user_id": "usr_admin",
+  "email": "admin@example.com",
+  "enabled": true,
+  "is_admin": true,
+  "created_at": "2026-08-15T12:00:00Z"
+}

@@ -1,0 +1,123 @@
+openapi: 3.1.0
+info:
+  title: RBA audit store — decision read API
+  version: 0.3.0
+  description: |
+    Read model for the IdP-6 decision browser. `rba-audit-service` owns
+    `rba_audit.audit_decisions`; this HTTP API is how the IdP BFF lists
+    scored logins with reasons. The consumer loop is unchanged.
+  contact:
+    name: roku-pfi
+    url: https://github.com/roku-pfi
+servers:
+  - url: http://localhost:8002
+    description: Local rba-audit-service HTTP
+tags:
+  - name: audit
+    description: Persisted DecisionMade events
+paths:
+  /healthz:
+    get:
+      tags: [audit]
+      operationId: healthz
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+  /decisions:
+    get:
+      tags: [audit]
+      operationId: listDecisions
+      parameters:
+        - in: query
+          name: user_id
+          schema: { type: string }
+        - in: query
+          name: application_id
+          schema: { type: string }
+        - in: query
+          name: action
+          schema:
+            type: string
+            enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK]
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionListResponse"
+  /decisions/{event_id}:
+    get:
+      tags: [audit]
+      operationId: getDecision
+      parameters:
+        - in: path
+          name: event_id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionRecord"
+        "404":
+          description: Unknown event_id
+components:
+  schemas:
+    Reason:
+      type: object
+      additionalProperties: false
+      required: [code, signal]
+      properties:
+        code: { type: string }
+        signal: { type: string }
+        contribution: { type: number }
+        detail: { type: string }
+    DecisionRecord:
+      type: object
+      additionalProperties: false
+      required:
+        - event_id
+        - occurred_at
+        - application_id
+        - user_id
+        - risk_score
+        - risk_level
+        - action
+        - model_version
+        - policy_version
+        - feature_schema_version
+      properties:
+        event_id: { type: string, format: uuid }
+        occurred_at: { type: string, format: date-time }
+        application_id: { type: string }
+        user_id: { type: string }
+        risk_score: { type: number, minimum: 0, maximum: 1 }
+        risk_level: { type: string, enum: [LOW, MEDIUM, HIGH, CRITICAL] }
+        action: { type: string, enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK] }
+        reasons:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reason"
+        model_version: { type: string }
+        policy_version: { type: string }
+        feature_schema_version: { type: string }
+        fallback: { type: boolean, default: false }
+    DecisionListResponse:
+      type: object
+      additionalProperties: false
+      required: [items, count]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DecisionRecord"
+        count: { type: integer, minimum: 0 }
