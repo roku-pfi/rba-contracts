@@ -7,7 +7,8 @@ info:
     and enforces ALLOW / MFA / REAUTH / BLOCK. Passwords never enter decision-service.
 
     Login API frozen as `rba-contracts` 0.2.0 (ADR-0013 IdP-1). Admin API is
-    additive in 0.3.0 (`openapi/idp-admin.yaml`).
+    additive in 0.3.0 (`openapi/idp-admin.yaml`); groups / `ACCESS_DENIED` in
+    0.4.0 (IdP-7).
   contact:
     name: roku-pfi
     url: https://github.com/roku-pfi
@@ -100,6 +101,7 @@ components:
         - REAUTH_REQUIRED
         - BLOCKED
         - INVALID_CREDENTIALS
+        - ACCESS_DENIED
     LoginRequest:
       type: object
       additionalProperties: false
@@ -205,7 +207,7 @@ components:
         is_admin:
           type: boolean
           default: false
-          description: IdP-6. True for seeded admin; not a groups system.
+          description: IdP-6. True for seeded admin; independent of groups (IdP-7).
     SessionResponse:
       type: object
       additionalProperties: false

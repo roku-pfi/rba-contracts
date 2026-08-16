@@ -16,7 +16,9 @@ from rba_contracts import (
     Action,
     AdminUserPublic,
     ApplicationPublic,
+    CreateGroupRequest,
     CreateUserRequest,
+    GroupDetail,
     DecisionMadeEvent,
     DecisionRecord,
     FeatureVectorV1,
@@ -25,6 +27,7 @@ from rba_contracts import (
     LoginResponse,
     MfaVerifyRequest,
     ModelArtifactMetadata,
+    PatchGroupRequest,
     PatchUserRequest,
     PolicyConfig,
     RiskEvaluateRequest,
@@ -194,8 +197,18 @@ def test_admin_examples_roundtrip() -> None:
     assert decision.action == Action.REQUIRE_MFA
     assert decision.reasons[0].signal == "device_type"
 
+    group = GroupDetail.model_validate(_load_json("admin-group.json"))
+    assert group.group_id == "grp_banking"
+    assert group.grants[0].permission.value == "access"
+    assert group.members[0].email == "demo@example.com"
+
+    created_group = CreateGroupRequest.model_validate(_load_json("admin-create-group.json"))
+    assert created_group.name == "Banking users"
+
     with pytest.raises(Exception):
         PatchUserRequest.model_validate({})
+    with pytest.raises(Exception):
+        PatchGroupRequest.model_validate({})
 
 
 def test_outcome_from_action() -> None:
@@ -212,3 +225,13 @@ def test_idp_login_response_allows_identity_only_stub() -> None:
     assert resp.action is None
     dumped = resp.model_dump()
     assert "password" not in dumped
+
+
+def test_access_denied_is_an_idp_outcome_not_a_pdp_action() -> None:
+    resp = LoginResponse(
+        outcome=LoginOutcome.ACCESS_DENIED,
+        user_id="usr_demo",
+        detail="user is not granted access to this application",
+    )
+    assert resp.action is None
+    assert LoginOutcome.ACCESS_DENIED.value == "ACCESS_DENIED"

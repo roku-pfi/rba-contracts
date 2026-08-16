@@ -1,13 +1,14 @@
 openapi: 3.1.0
 info:
   title: RBA IdP — admin API
-  version: 0.3.0
+  version: 0.4.0
   description: |
-    IdP-6 control-plane API served by `rba-idp` at `/admin/api/*`.
-    Users and applications are owned by the IdP DB. Decisions are proxied
-    from `rba-audit-service`. Policy is proxied from `rba-decision-service`
-    (`GET`/`PUT /policy`). All routes require a Bearer session for a user
-    with `is_admin=true`. Groups stay IdP-7.
+    IdP-6/7 control-plane API served by `rba-idp` at `/admin/api/*`.
+    Users, applications, and groups are owned by the IdP DB. Decisions are
+    proxied from `rba-audit-service` / the PDP. Policy is proxied from
+    `rba-decision-service` (`GET`/`PUT /policy`). All routes require a Bearer
+    session for a user with `is_admin=true`. Groups grant app-scoped `access`
+    (IdP-7); they do not replace `is_admin`.
   contact:
     name: roku-pfi
     url: https://github.com/roku-pfi
@@ -16,7 +17,7 @@ servers:
     description: Local rba-idp
 tags:
   - name: admin
-    description: Users, applications, decision browser, policy
+    description: Users, applications, groups, decision browser, policy
 paths:
   /admin/api/users:
     get:
@@ -130,6 +131,188 @@ paths:
                 $ref: "#/components/schemas/ApplicationPublic"
         "404":
           description: Unknown application
+  /admin/api/groups:
+    get:
+      tags: [admin]
+      operationId: listGroups
+      summary: List groups (member counts; no nested members/grants)
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GroupPublic"
+        "401":
+          description: Missing or expired session
+        "403":
+          description: Session is not an admin
+    post:
+      tags: [admin]
+      operationId: createGroup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGroupRequest"
+            examples:
+              banking:
+                $ref: "#/components/examples/CreateGroup"
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupDetail"
+        "409":
+          description: group_id or name already exists
+  /admin/api/groups/{group_id}:
+    get:
+      tags: [admin]
+      operationId: getGroup
+      parameters:
+        - in: path
+          name: group_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupDetail"
+        "404":
+          description: Unknown group
+    patch:
+      tags: [admin]
+      operationId: patchGroup
+      parameters:
+        - in: path
+          name: group_id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchGroupRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupDetail"
+        "404":
+          description: Unknown group
+    delete:
+      tags: [admin]
+      operationId: deleteGroup
+      parameters:
+        - in: path
+          name: group_id
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Group and its memberships/grants removed
+        "404":
+          description: Unknown group
+  /admin/api/groups/{group_id}/members:
+    post:
+      tags: [admin]
+      operationId: addGroupMember
+      parameters:
+        - in: path
+          name: group_id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddGroupMemberRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupDetail"
+        "404":
+          description: Unknown group or user
+        "409":
+          description: User is already a member
+  /admin/api/groups/{group_id}/members/{user_id}:
+    delete:
+      tags: [admin]
+      operationId: removeGroupMember
+      parameters:
+        - in: path
+          name: group_id
+          required: true
+          schema: { type: string }
+        - in: path
+          name: user_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupDetail"
+        "404":
+          description: Unknown group or membership
+  /admin/api/groups/{group_id}/grants:
+    post:
+      tags: [admin]
+      operationId: addGroupGrant
+      summary: Grant a group permission on an application (default access)
+      parameters:
+        - in: path
+          name: group_id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGroupGrantRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupDetail"
+        "404":
+          description: Unknown group or application
+        "409":
+          description: Grant already exists
+  /admin/api/groups/{group_id}/grants/{application_id}:
+    delete:
+      tags: [admin]
+      operationId: removeGroupGrant
+      parameters:
+        - in: path
+          name: group_id
+          required: true
+          schema: { type: string }
+        - in: path
+          name: application_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupDetail"
+        "404":
+          description: Unknown group or grant
   /admin/api/decisions:
     get:
       tags: [admin]
@@ -259,6 +442,71 @@ components:
       properties:
         name: { type: string }
         enabled: { type: boolean }
+    GroupMemberPublic:
+      type: object
+      additionalProperties: false
+      required: [user_id, email]
+      properties:
+        user_id: { type: string }
+        email: { type: string }
+    GroupGrantPublic:
+      type: object
+      additionalProperties: false
+      required: [application_id, permission]
+      properties:
+        application_id: { type: string }
+        permission: { type: string, enum: [access] }
+    GroupPublic:
+      type: object
+      additionalProperties: false
+      required: [group_id, name, member_count, created_at]
+      properties:
+        group_id: { type: string }
+        name: { type: string }
+        description: { type: string, default: "" }
+        member_count: { type: integer, minimum: 0 }
+        created_at: { type: string, format: date-time }
+    GroupDetail:
+      allOf:
+        - $ref: "#/components/schemas/GroupPublic"
+        - type: object
+          additionalProperties: false
+          properties:
+            members:
+              type: array
+              items:
+                $ref: "#/components/schemas/GroupMemberPublic"
+            grants:
+              type: array
+              items:
+                $ref: "#/components/schemas/GroupGrantPublic"
+    CreateGroupRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        group_id: { type: string }
+        name: { type: string }
+        description: { type: string, default: "" }
+    PatchGroupRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string }
+        description: { type: string }
+    AddGroupMemberRequest:
+      type: object
+      additionalProperties: false
+      required: [user_id]
+      properties:
+        user_id: { type: string }
+    CreateGroupGrantRequest:
+      type: object
+      additionalProperties: false
+      required: [application_id]
+      properties:
+        application_id: { type: string }
+        permission: { type: string, enum: [access], default: access }
     Reason:
       type: object
       additionalProperties: false
@@ -367,3 +615,8 @@ components:
         email: analyst@example.com
         password: analyst-password
         is_admin: false
+    CreateGroup:
+      value:
+        group_id: grp_banking
+        name: Banking users
+        description: May sign in to the demo banking app

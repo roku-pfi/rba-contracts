@@ -19,13 +19,17 @@ from rba_contracts.evaluate import Reason
 
 
 class LoginOutcome(str, Enum):
-    """What the IdP tells the client after credentials (and later, after the PDP)."""
+    """What the IdP tells the client after credentials (and later, after the PDP).
+
+    ``ACCESS_DENIED`` is IdP-7 authz (no group grant), not a PDP ``BLOCK``.
+    """
 
     AUTHENTICATED = "AUTHENTICATED"
     MFA_REQUIRED = "MFA_REQUIRED"
     REAUTH_REQUIRED = "REAUTH_REQUIRED"
     BLOCKED = "BLOCKED"
     INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
+    ACCESS_DENIED = "ACCESS_DENIED"
 
 
 def outcome_from_action(action: Action) -> LoginOutcome:

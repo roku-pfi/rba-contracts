@@ -4,10 +4,11 @@ Versioned **API / event / feature / model / policy** contracts for the RBA
 polyrepo. This library exists to defeat **contract drift** between services —
 the counterpart of `rba-features` defeating train/serve skew.
 
-Package version: **0.3.0** (IdP-6 admin + policy GET/PUT + audit read).
+Package version: **0.4.0** (IdP-7 groups + `ACCESS_DENIED`).
 PDP / feature / policy freeze was **v0.1.0**
 ([ADR-0008](../docs/decisions/0008-contracts-freeze.md));
-`LoginEventSnapshot` landed in **v0.1.1**; IdP login API in **v0.2.0**.
+`LoginEventSnapshot` landed in **v0.1.1**; IdP login API in **v0.2.0**;
+admin console in **v0.3.0**.
 
 YAML/JSON Schema files are the language-neutral source of truth. Executable
 Pydantic models under `src/rba_contracts/` are what Python services import.
@@ -22,7 +23,7 @@ Pydantic models under `src/rba_contracts/` are what Python services import.
 | Model I/O | `schemas/model-prediction.schema.json`, `model-artifact.schema.json` | `predict_proba`-compatible score + artifact metadata |
 | PDP API | `openapi/risk-evaluate.yaml` | `POST /risk/evaluate`, `GET`/`PUT /policy` |
 | IdP API | `openapi/idp.yaml` | `POST /login`, `/mfa/verify`, `GET /session`, `POST /logout` |
-| IdP admin | `openapi/idp-admin.yaml` | `/admin/api` users, apps, decisions, policy |
+| IdP admin | `openapi/idp-admin.yaml` | `/admin/api` users, apps, groups, decisions, policy |
 | Audit read | `openapi/audit.yaml` | `GET /decisions` (IdP-6 decision browser) |
 | Bus event | `asyncapi/decision-events.yaml` | `rba.decision.made.v1` (outbox / `event_id`) |
 | Policy config | `schemas/policy-config.schema.json` + `examples/policy-config.yaml` | score→level / level→action |
@@ -36,7 +37,7 @@ Canonical JSON examples live in `examples/` and are validated by
 openapi/
 ├── risk-evaluate.yaml     # PDP (+ GET/PUT /policy)
 ├── idp.yaml               # PEP login
-├── idp-admin.yaml         # IdP-6 admin BFF
+├── idp-admin.yaml         # IdP-6/7 admin BFF (groups in 0.4.0)
 └── audit.yaml             # audit-service decision read API
 asyncapi/
 └── decision-events.yaml
@@ -50,7 +51,7 @@ src/rba_contracts/
 ├── policy.py              # PolicyConfig, apply_policy()
 ├── events.py              # DecisionMadeEvent, LoginEventSnapshot
 ├── idp.py                 # LoginRequest/Response, session, MFA, outcome_from_action
-└── admin.py               # AdminUserPublic, ApplicationPublic, DecisionRecord
+└── admin.py               # users, apps, groups, DecisionRecord
 tests/test_contracts.py
 ```
 
@@ -105,24 +106,31 @@ structured `Reason`s on the PDP response.
 (order included). Changing either side without the other is a breaking
 change — bump `FEATURE_SCHEMA_VERSION`.
 
-## IdP: login / MFA / session (v0.2.0)
+## IdP: login / MFA / session (v0.2.0 + ACCESS_DENIED in 0.4.0)
 
 Thesis-scale shell, not OIDC/SAML ([ADR-0014](../docs/decisions/0014-thesis-scale-idp-platform.md)).
 Implemented by `rba-idp`.
 
-| Outcome | From PDP action |
+| Outcome | From |
 |---|---|
-| `AUTHENTICATED` | `ALLOW` |
-| `MFA_REQUIRED` | `REQUIRE_MFA` |
-| `REAUTH_REQUIRED` | `REAUTHENTICATE` |
-| `BLOCKED` | `BLOCK` |
+| `AUTHENTICATED` | PDP `ALLOW` |
+| `MFA_REQUIRED` | PDP `REQUIRE_MFA` |
+| `REAUTH_REQUIRED` | PDP `REAUTHENTICATE` |
+| `BLOCKED` | PDP `BLOCK` |
 | `INVALID_CREDENTIALS` | IdP-only (no PDP call) |
+| `ACCESS_DENIED` | IdP-only: password ok, no group grant for this app (IdP-7) |
 
-`outcome_from_action()` is the mapping — services must not re-implement it.
+`outcome_from_action()` maps PDP actions only — services must not re-implement
+it. `ACCESS_DENIED` is identity/authz, not a risk `BLOCK`.
 
 Login request carries email + password + the same device/geo signals the PDP
 needs. Password **never** appears on any response. Optional `session` /
 `challenge_id` appear at IdP-4.
+
+## IdP admin: groups (v0.4.0)
+
+`GroupPublic` / `GroupDetail` plus membership and app-scoped grants
+(`permission=access`). Admin auth remains `is_admin` (ADR-0017).
 
 ## Bus: `rba.decision.made.v1`
 
@@ -154,5 +162,5 @@ profile-service, audit-service (editable `../rba-contracts` in local venvs).
 
 ## Status
 
-Phase 2 PDP freeze + IdP-1 login contracts (0.2.0). Roadmap:
+Phase 2 PDP freeze + IdP login/admin/groups (0.4.0). Roadmap:
 `../docs/plans/status.md`.

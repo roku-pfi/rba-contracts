@@ -1,0 +1,19 @@
+{
+  "group_id": "grp_banking",
+  "name": "Banking users",
+  "description": "May sign in to the demo banking app",
+  "member_count": 1,
+  "created_at": "2026-08-15T12:00:00Z",
+  "members": [
+    {
+      "user_id": "usr_demo",
+      "email": "demo@example.com"
+    }
+  ],
+  "grants": [
+    {
+      "application_id": "demo-banking-app",
+      "permission": "access"
+    }
+  ]
+}
