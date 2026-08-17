@@ -16,6 +16,8 @@ from rba_contracts import (
     Action,
     AdminUserPublic,
     ApplicationPublic,
+    CallbackTokenRequest,
+    CallbackTokenResponse,
     CreateGroupRequest,
     CreateUserRequest,
     GroupDetail,
@@ -181,6 +183,16 @@ def test_idp_login_examples_roundtrip() -> None:
     assert session.user.email == "demo@example.com"
     assert session.user.is_admin is False
 
+    token_req = CallbackTokenRequest.model_validate(
+        _load_json("idp-callback-token-request.json")
+    )
+    assert token_req.code
+    token_resp = CallbackTokenResponse.model_validate(
+        _load_json("idp-callback-token-response.json")
+    )
+    assert token_resp.user.email == "demo@example.com"
+    assert token_resp.session.token
+
 
 def test_admin_examples_roundtrip() -> None:
     user = AdminUserPublic.model_validate(_load_json("admin-user.json"))
@@ -189,6 +201,7 @@ def test_admin_examples_roundtrip() -> None:
 
     app = ApplicationPublic.model_validate(_load_json("admin-application.json"))
     assert app.application_id == "demo-banking-app"
+    assert app.redirect_uri == "http://localhost:8002/callback"
 
     created = CreateUserRequest.model_validate(_load_json("admin-create-user.json"))
     assert created.is_admin is False

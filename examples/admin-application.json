@@ -2,5 +2,6 @@
   "application_id": "demo-banking-app",
   "name": "Demo banking app",
   "enabled": true,
-  "created_at": "2026-08-15T12:00:00Z"
+  "created_at": "2026-08-15T12:00:00Z",
+  "redirect_uri": "http://localhost:8002/callback"
 }

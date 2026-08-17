@@ -30,6 +30,8 @@ from rba_contracts.model import (
     SignalContribution,
 )
 from rba_contracts.idp import (
+    CallbackTokenRequest,
+    CallbackTokenResponse,
     LoginOutcome,
     LoginRequest,
     LoginResponse,
@@ -48,6 +50,8 @@ __all__ = [
     "FREEMAN_FEATURES",
     "Action",
     "AddGroupMemberRequest",
+    "CallbackTokenRequest",
+    "CallbackTokenResponse",
     "AdminUserPublic",
     "AppPermission",
     "ApplicationPublic",
@@ -86,4 +90,4 @@ __all__ = [
     "outcome_from_action",
 ]
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rba-contracts"
-version = "0.4.0"
+version = "0.5.0"
 description = "Versioned API/event/feature/model/policy/admin/group contracts for the RBA polyrepo. Prevents contract drift between services."
 readme = "README.md"
 requires-python = ">=3.12"

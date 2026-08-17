@@ -30,6 +30,10 @@ class ApplicationPublic(BaseModel):
     name: str = Field(min_length=1)
     enabled: bool
     created_at: datetime
+    redirect_uri: str | None = Field(
+        default=None,
+        description="Thin callback URL for AUTHENTICATED (ADR-0024). Not OIDC.",
+    )
 
 
 class CreateApplicationRequest(BaseModel):
@@ -37,6 +41,7 @@ class CreateApplicationRequest(BaseModel):
 
     application_id: str = Field(min_length=1, max_length=128)
     name: str = Field(min_length=1, max_length=256)
+    redirect_uri: str | None = Field(default=None, min_length=1, max_length=512)
 
 
 class PatchApplicationRequest(BaseModel):
@@ -44,10 +49,11 @@ class PatchApplicationRequest(BaseModel):
 
     name: str | None = Field(default=None, min_length=1, max_length=256)
     enabled: bool | None = None
+    redirect_uri: str | None = Field(default=None, max_length=512)
 
     @model_validator(mode="after")
     def _at_least_one(self) -> PatchApplicationRequest:
-        if self.name is None and self.enabled is None:
+        if self.name is None and self.enabled is None and self.redirect_uri is None:
             raise ValueError("at least one field is required")
         return self
 

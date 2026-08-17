@@ -57,6 +57,11 @@ class LoginRequest(BaseModel):
     os: str | None = None
     browser: str | None = None
     user_agent: str | None = None
+    redirect_uri: str | None = Field(
+        default=None,
+        min_length=1,
+        description="Registered client callback (Demo-2). Not OIDC.",
+    )
 
 
 class SessionToken(BaseModel):
@@ -85,12 +90,25 @@ class LoginResponse(BaseModel):
     session: SessionToken | None = None
     challenge_id: UUID | None = None
     detail: str | None = None
+    redirect_to: str | None = Field(
+        default=None,
+        description="Full callback URL with one-time code when the app has a redirect_uri.",
+    )
 
 
 class MfaVerifyRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     challenge_id: UUID
+    code: str = Field(min_length=1)
+    redirect_uri: str | None = Field(default=None, min_length=1)
+
+
+class CallbackTokenRequest(BaseModel):
+    """POST /callback/token — relying party exchanges a one-time code (ADR-0024)."""
+
+    model_config = ConfigDict(extra="forbid")
+
     code: str = Field(min_length=1)
 
 
@@ -101,6 +119,13 @@ class UserPublic(BaseModel):
     email: str = Field(min_length=1)
     created_at: datetime
     is_admin: bool = False
+
+
+class CallbackTokenResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    session: SessionToken
+    user: UserPublic
 
 
 class SessionResponse(BaseModel):

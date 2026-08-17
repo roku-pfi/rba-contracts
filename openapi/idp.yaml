@@ -1,14 +1,15 @@
 openapi: 3.1.0
 info:
   title: RBA thin IdP — login API
-  version: 0.2.0
+  version: 0.5.0
   description: |
     PEP contract. The IdP verifies identity, calls the PDP (`POST /risk/evaluate`),
     and enforces ALLOW / MFA / REAUTH / BLOCK. Passwords never enter decision-service.
 
     Login API frozen as `rba-contracts` 0.2.0 (ADR-0013 IdP-1). Admin API is
     additive in 0.3.0 (`openapi/idp-admin.yaml`); groups / `ACCESS_DENIED` in
-    0.4.0 (IdP-7).
+    0.4.0 (IdP-7). Demo-2 thin callback (`POST /callback/token`, `redirect_uri`)
+    is additive in 0.5.0 (ADR-0024) — not OIDC.
   contact:
     name: roku-pfi
     url: https://github.com/roku-pfi
@@ -91,6 +92,32 @@ paths:
       responses:
         "204":
           description: Session dropped (idempotent if already gone)
+  /callback/token:
+    post:
+      tags: [login]
+      operationId: exchangeCallbackToken
+      summary: Exchange a one-time callback code for the IdP session token
+      description: |
+        Thin return path for a relying party (ADR-0024). Not OIDC token
+        endpoint — no client secret, no grant_type, no discovery document.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CallbackTokenRequest"
+            examples:
+              demoBank:
+                $ref: "#/components/examples/CallbackTokenRequestDemo"
+      responses:
+        "200":
+          description: Session token the app may present to GET /session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CallbackTokenResponse"
+        "400":
+          description: Unknown, expired, or already used code
 components:
   schemas:
     LoginOutcome:
@@ -132,6 +159,10 @@ components:
           type: string
         user_agent:
           type: string
+        redirect_uri:
+          type: string
+          minLength: 1
+          description: Must match the application's registered callback (Demo-2).
     SessionToken:
       type: object
       additionalProperties: false
@@ -183,6 +214,9 @@ components:
           format: uuid
         detail:
           type: string
+        redirect_to:
+          type: string
+          description: Callback URL with a one-time `code` query param (Demo-2).
     MfaVerifyRequest:
       type: object
       additionalProperties: false
@@ -192,6 +226,9 @@ components:
           type: string
           format: uuid
         code:
+          type: string
+          minLength: 1
+        redirect_uri:
           type: string
           minLength: 1
     UserPublic:
@@ -218,6 +255,23 @@ components:
         expires_at:
           type: string
           format: date-time
+    CallbackTokenRequest:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code:
+          type: string
+          minLength: 1
+    CallbackTokenResponse:
+      type: object
+      additionalProperties: false
+      required: [session, user]
+      properties:
+        session:
+          $ref: "#/components/schemas/SessionToken"
+        user:
+          $ref: "#/components/schemas/UserPublic"
   examples:
     LoginRequestDemo:
       value:
@@ -244,3 +298,6 @@ components:
             contribution: 1.8
             detail: device_type not previously seen for this user
         challenge_id: "7c2e1b3d-4a6f-9c8e-2d1b-3a6f9c8e4f9a"
+    CallbackTokenRequestDemo:
+      value:
+        code: "demo-one-time-code"

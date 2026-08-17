@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RBA IdP — admin API
-  version: 0.4.0
+  version: 0.5.0
   description: |
     IdP-6/7 control-plane API served by `rba-idp` at `/admin/api/*`.
     Users, applications, and groups are owned by the IdP DB. Decisions are
@@ -429,6 +429,7 @@ components:
         name: { type: string }
         enabled: { type: boolean }
         created_at: { type: string, format: date-time }
+        redirect_uri: { type: string }
     CreateApplicationRequest:
       type: object
       additionalProperties: false
@@ -436,12 +437,14 @@ components:
       properties:
         application_id: { type: string }
         name: { type: string }
+        redirect_uri: { type: string }
     PatchApplicationRequest:
       type: object
       additionalProperties: false
       properties:
         name: { type: string }
         enabled: { type: boolean }
+        redirect_uri: { type: string }
     GroupMemberPublic:
       type: object
       additionalProperties: false

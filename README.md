@@ -4,7 +4,7 @@ Versioned **API / event / feature / model / policy** contracts for the RBA
 polyrepo. This library exists to defeat **contract drift** between services —
 the counterpart of `rba-features` defeating train/serve skew.
 
-Package version: **0.4.0** (IdP-7 groups + `ACCESS_DENIED`).
+Package version: **0.5.0** (Demo-2 thin `redirect_uri` / `POST /callback/token`).
 PDP / feature / policy freeze was **v0.1.0**
 ([ADR-0008](../docs/decisions/0008-contracts-freeze.md));
 `LoginEventSnapshot` landed in **v0.1.1**; IdP login API in **v0.2.0**;
@@ -22,7 +22,7 @@ Pydantic models under `src/rba_contracts/` are what Python services import.
 | Feature schema | `schemas/feature-vector.schema.json` + `FeatureVectorV1` | Names, types, order (`FEATURE_NAMES`) |
 | Model I/O | `schemas/model-prediction.schema.json`, `model-artifact.schema.json` | `predict_proba`-compatible score + artifact metadata |
 | PDP API | `openapi/risk-evaluate.yaml` | `POST /risk/evaluate`, `GET`/`PUT /policy` |
-| IdP API | `openapi/idp.yaml` | `POST /login`, `/mfa/verify`, `GET /session`, `POST /logout` |
+| IdP API | `openapi/idp.yaml` | `POST /login`, `/mfa/verify`, `GET /session`, `POST /logout`, `POST /callback/token` |
 | IdP admin | `openapi/idp-admin.yaml` | `/admin/api` users, apps, groups, decisions, policy |
 | Audit read | `openapi/audit.yaml` | `GET /decisions` (IdP-6 decision browser) |
 | Bus event | `asyncapi/decision-events.yaml` | `rba.decision.made.v1` (outbox / `event_id`) |
