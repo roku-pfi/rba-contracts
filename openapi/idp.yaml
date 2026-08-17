@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RBA thin IdP — login API
-  version: 0.5.0
+  version: 0.6.0
   description: |
     PEP contract. The IdP verifies identity, calls the PDP (`POST /risk/evaluate`),
     and enforces ALLOW / MFA / REAUTH / BLOCK. Passwords never enter decision-service.
@@ -9,7 +9,10 @@ info:
     Login API frozen as `rba-contracts` 0.2.0 (ADR-0013 IdP-1). Admin API is
     additive in 0.3.0 (`openapi/idp-admin.yaml`); groups / `ACCESS_DENIED` in
     0.4.0 (IdP-7). Demo-2 thin callback (`POST /callback/token`, `redirect_uri`)
-    is additive in 0.5.0 (ADR-0024) — not OIDC.
+    is additive in 0.5.0 (ADR-0024) — not OIDC. Demo-4 WebAuthn step-up
+    (`POST /mfa/webauthn/options`, `POST /mfa/webauthn/verify`) is additive in
+    0.6.0; `POST /mfa/verify` mock OTP remains for tests. Completing MFA does
+    not re-score.
   contact:
     name: roku-pfi
     url: https://github.com/roku-pfi
@@ -50,7 +53,7 @@ paths:
     post:
       tags: [login]
       operationId: verifyMfa
-      summary: Submit a mock OTP for an MFA / reauth challenge
+      summary: Submit a mock OTP for an MFA / reauth challenge (tests)
       requestBody:
         required: true
         content:
@@ -64,6 +67,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/LoginResponse"
+  /mfa/webauthn/options:
+    post:
+      tags: [login]
+      operationId: mfaWebAuthnOptions
+      summary: Start a WebAuthn create/get ceremony for an open MFA challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MfaWebAuthnOptionsRequest"
+      responses:
+        "200":
+          description: Creation options (no passkey yet) or request options (existing passkey)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MfaWebAuthnOptionsResponse"
+        "400":
+          description: Unknown or expired challenge
+  /mfa/webauthn/verify:
+    post:
+      tags: [login]
+      operationId: mfaWebAuthnVerify
+      summary: Finish the WebAuthn ceremony; issues a session without re-scoring
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MfaWebAuthnVerifyRequest"
+      responses:
+        "200":
+          description: Same shape as /login
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: Unknown or expired challenge, or ceremony not started
   /session:
     get:
       tags: [login]
@@ -228,6 +271,44 @@ components:
         code:
           type: string
           minLength: 1
+        redirect_uri:
+          type: string
+          minLength: 1
+    MfaWebAuthnOptionsRequest:
+      type: object
+      additionalProperties: false
+      required: [challenge_id]
+      properties:
+        challenge_id:
+          type: string
+          format: uuid
+    MfaWebAuthnOptionsResponse:
+      type: object
+      additionalProperties: false
+      required: [challenge_id, mode, public_key]
+      properties:
+        challenge_id:
+          type: string
+          format: uuid
+        mode:
+          type: string
+          enum: [create, get]
+        public_key:
+          type: object
+          additionalProperties: true
+          description: WebAuthn options JSON; binary fields are base64url.
+    MfaWebAuthnVerifyRequest:
+      type: object
+      additionalProperties: false
+      required: [challenge_id, credential]
+      properties:
+        challenge_id:
+          type: string
+          format: uuid
+        credential:
+          type: object
+          additionalProperties: true
+          description: navigator.credentials result; ArrayBuffers as base64url.
         redirect_uri:
           type: string
           minLength: 1

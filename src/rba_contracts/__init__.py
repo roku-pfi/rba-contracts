@@ -36,9 +36,13 @@ from rba_contracts.idp import (
     LoginRequest,
     LoginResponse,
     MfaVerifyRequest,
+    MfaWebAuthnOptionsRequest,
+    MfaWebAuthnOptionsResponse,
+    MfaWebAuthnVerifyRequest,
     SessionResponse,
     SessionToken,
     UserPublic,
+    WebAuthnCeremonyMode,
     outcome_from_action,
 )
 from rba_contracts.policy import PolicyConfig, apply_policy
@@ -74,6 +78,9 @@ __all__ = [
     "LoginRequest",
     "LoginResponse",
     "MfaVerifyRequest",
+    "MfaWebAuthnOptionsRequest",
+    "MfaWebAuthnOptionsResponse",
+    "MfaWebAuthnVerifyRequest",
     "PatchApplicationRequest",
     "PatchGroupRequest",
     "PatchUserRequest",
@@ -86,8 +93,9 @@ __all__ = [
     "SessionToken",
     "SignalContribution",
     "UserPublic",
+    "WebAuthnCeremonyMode",
     "apply_policy",
     "outcome_from_action",
 ]
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"

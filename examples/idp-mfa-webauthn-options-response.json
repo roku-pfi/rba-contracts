@@ -1,0 +1,23 @@
+{
+  "challenge_id": "7c2e1b3d-4a6f-9c8e-2d1b-3a6f9c8e4f9a",
+  "mode": "create",
+  "public_key": {
+    "rp": {"name": "RBA Identity", "id": "localhost"},
+    "user": {
+      "id": "dXNyX2RlbW8",
+      "name": "demo@example.com",
+      "displayName": "demo@example.com"
+    },
+    "challenge": "eUk4LLwH-ziv8Uo3-oquOvO_adWd04NOPgYEFH8A71y_ug6JNns97LdVa-e-Fx1nOps1Qz7Gi5zCbDwr4Vw16w",
+    "pubKeyCredParams": [
+      {"type": "public-key", "alg": -7}
+    ],
+    "timeout": 60000,
+    "authenticatorSelection": {
+      "authenticatorAttachment": "platform",
+      "residentKey": "preferred",
+      "userVerification": "required"
+    },
+    "attestation": "none"
+  }
+}

@@ -4,7 +4,7 @@ Versioned **API / event / feature / model / policy** contracts for the RBA
 polyrepo. This library exists to defeat **contract drift** between services —
 the counterpart of `rba-features` defeating train/serve skew.
 
-Package version: **0.5.0** (Demo-2 thin `redirect_uri` / `POST /callback/token`).
+Package version: **0.6.0** (Demo-4 WebAuthn MFA options/verify; mock OTP remains).
 PDP / feature / policy freeze was **v0.1.0**
 ([ADR-0008](../docs/decisions/0008-contracts-freeze.md));
 `LoginEventSnapshot` landed in **v0.1.1**; IdP login API in **v0.2.0**;
@@ -22,7 +22,7 @@ Pydantic models under `src/rba_contracts/` are what Python services import.
 | Feature schema | `schemas/feature-vector.schema.json` + `FeatureVectorV1` | Names, types, order (`FEATURE_NAMES`) |
 | Model I/O | `schemas/model-prediction.schema.json`, `model-artifact.schema.json` | `predict_proba`-compatible score + artifact metadata |
 | PDP API | `openapi/risk-evaluate.yaml` | `POST /risk/evaluate`, `GET`/`PUT /policy` |
-| IdP API | `openapi/idp.yaml` | `POST /login`, `/mfa/verify`, `GET /session`, `POST /logout`, `POST /callback/token` |
+| IdP API | `openapi/idp.yaml` | `POST /login`, `/mfa/verify` (mock OTP), `/mfa/webauthn/*`, `GET /session`, `POST /logout`, `POST /callback/token` |
 | IdP admin | `openapi/idp-admin.yaml` | `/admin/api` users, apps, groups, decisions, policy |
 | Audit read | `openapi/audit.yaml` | `GET /decisions` (IdP-6 decision browser) |
 | Bus event | `asyncapi/decision-events.yaml` | `rba.decision.made.v1` (outbox / `event_id`) |
@@ -127,6 +127,10 @@ Login request carries email + password + the same device/geo signals the PDP
 needs. Password **never** appears on any response. Optional `session` /
 `challenge_id` appear at IdP-4.
 
+Demo-4 (0.6.0): `POST /mfa/webauthn/options` then `POST /mfa/webauthn/verify`
+for a platform passkey. Completing MFA does **not** re-score. `POST /mfa/verify`
+with a mock OTP stays for tests.
+
 ## IdP admin: groups (v0.4.0)
 
 `GroupPublic` / `GroupDetail` plus membership and app-scoped grants
@@ -162,5 +166,5 @@ profile-service, audit-service (editable `../rba-contracts` in local venvs).
 
 ## Status
 
-Phase 2 PDP freeze + IdP login/admin/groups (0.4.0). Roadmap:
-`../docs/plans/status.md`.
+Phase 2 PDP freeze + IdP login/admin/groups (0.4.0) + Demo-2 callback (0.5.0)
++ Demo-4 WebAuthn (0.6.0). Roadmap: `../docs/plans/status.md`.

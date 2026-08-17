@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -97,10 +98,49 @@ class LoginResponse(BaseModel):
 
 
 class MfaVerifyRequest(BaseModel):
+    """POST /mfa/verify — mock OTP for tests. Live step-up is WebAuthn (0.6.0)."""
+
     model_config = ConfigDict(extra="forbid")
 
     challenge_id: UUID
     code: str = Field(min_length=1)
+    redirect_uri: str | None = Field(default=None, min_length=1)
+
+
+class WebAuthnCeremonyMode(str, Enum):
+    """navigator.credentials.create vs get."""
+
+    CREATE = "create"
+    GET = "get"
+
+
+class MfaWebAuthnOptionsRequest(BaseModel):
+    """POST /mfa/webauthn/options — start a passkey ceremony for an open challenge."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    challenge_id: UUID
+
+
+class MfaWebAuthnOptionsResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    challenge_id: UUID
+    mode: WebAuthnCeremonyMode
+    public_key: dict[str, Any] = Field(
+        description="WebAuthn PublicKeyCredentialCreation/RequestOptions JSON (base64url buffers).",
+    )
+
+
+class MfaWebAuthnVerifyRequest(BaseModel):
+    """POST /mfa/webauthn/verify — finish the ceremony. Does not re-score."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    challenge_id: UUID
+    credential: dict[str, Any] = Field(
+        description="JSON from navigator.credentials with ArrayBuffers as base64url.",
+    )
     redirect_uri: str | None = Field(default=None, min_length=1)
 
 

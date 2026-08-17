@@ -19,7 +19,7 @@ status / decisions live in the **`docs`** repo (`../docs`):
 
 ```
 openapi/risk-evaluate.yaml     # POST /risk/evaluate + GET/PUT /policy (PDP)
-openapi/idp.yaml               # POST /login, /mfa/verify, /session, /logout, /callback/token
+openapi/idp.yaml               # POST /login, /mfa/verify, /mfa/webauthn/*, /session, /logout, /callback/token
 openapi/idp-admin.yaml         # IdP-6/7 /admin/api (groups in 0.4.0)
 openapi/audit.yaml             # GET /decisions
 asyncapi/decision-events.yaml  # rba.decision.made.v1 outbox/bus event

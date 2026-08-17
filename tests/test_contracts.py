@@ -28,6 +28,9 @@ from rba_contracts import (
     LoginRequest,
     LoginResponse,
     MfaVerifyRequest,
+    MfaWebAuthnOptionsRequest,
+    MfaWebAuthnOptionsResponse,
+    MfaWebAuthnVerifyRequest,
     ModelArtifactMetadata,
     PatchGroupRequest,
     PatchUserRequest,
@@ -178,6 +181,20 @@ def test_idp_login_examples_roundtrip() -> None:
 
     mfa = MfaVerifyRequest.model_validate(_load_json("idp-mfa-verify-request.json"))
     assert mfa.code == "000000"
+
+    opts_req = MfaWebAuthnOptionsRequest.model_validate(
+        _load_json("idp-mfa-webauthn-options-request.json")
+    )
+    assert opts_req.challenge_id == mfa.challenge_id
+    opts = MfaWebAuthnOptionsResponse.model_validate(
+        _load_json("idp-mfa-webauthn-options-response.json")
+    )
+    assert opts.mode.value == "create"
+    assert opts.public_key["rp"]["id"] == "localhost"
+    assertion = MfaWebAuthnVerifyRequest.model_validate(
+        _load_json("idp-mfa-webauthn-verify-request.json")
+    )
+    assert assertion.credential["type"] == "public-key"
 
     session = SessionResponse.model_validate(_load_json("idp-session-response.json"))
     assert session.user.email == "demo@example.com"
