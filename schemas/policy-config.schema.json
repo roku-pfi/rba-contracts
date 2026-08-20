@@ -69,6 +69,11 @@
         "fallback_action": {
           "$ref": "#/$defs/action",
           "description": "Action when the scorer/profile store fails. Prefer REQUIRE_MFA over ALLOW for demo/high-sensitivity apps."
+        },
+        "monitor_only": {
+          "type": "boolean",
+          "default": false,
+          "description": "RF-09 / RNF-08. Score, decide, persist and publish as normal but return ALLOW to the PEP, so an operator can watch the engine on live traffic before it can act on anyone."
         }
       }
     },
@@ -94,7 +99,11 @@
             "CRITICAL": { "$ref": "#/$defs/action" }
           }
         },
-        "fallback_action": { "$ref": "#/$defs/action" }
+        "fallback_action": { "$ref": "#/$defs/action" },
+        "monitor_only": {
+          "type": "boolean",
+          "description": "Per-application override of the default monitor_only."
+        }
       }
     }
   }

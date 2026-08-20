@@ -65,3 +65,7 @@ class RiskEvaluateResponse(BaseModel):
     feature_schema_version: str
     fallback: bool = False
     scored_at: datetime
+    # Monitor-only mode (RF-09): the action the engine decided but did NOT
+    # enforce. When set, `action` is always ALLOW and the PEP must let the
+    # login through — the engine's opinion is recorded, not applied.
+    monitored_action: Action | None = None

@@ -223,6 +223,12 @@ components:
         scored_at:
           type: string
           format: date-time
+        monitored_action:
+          $ref: "#/components/schemas/Action"
+          description: >-
+            Monitor-only mode (RF-09). The action the engine decided but did not
+            enforce. Present only while monitor_only is on, in which case
+            `action` is always ALLOW and the PEP must let the login through.
     ScoreBand:
       type: object
       additionalProperties: false
@@ -253,6 +259,13 @@ components:
           $ref: "#/components/schemas/LevelToAction"
         fallback_action:
           $ref: "#/components/schemas/Action"
+        monitor_only:
+          type: boolean
+          default: false
+          description: >-
+            RF-09 / RNF-08. Score, decide, persist and publish as normal but
+            return ALLOW to the PEP, so an operator can watch the engine on live
+            traffic before it can act on anyone.
     ApplicationOverride:
       type: object
       additionalProperties: false
@@ -266,6 +279,9 @@ components:
           $ref: "#/components/schemas/LevelToAction"
         fallback_action:
           $ref: "#/components/schemas/Action"
+        monitor_only:
+          type: boolean
+          description: Per-application override of the default monitor_only.
     PolicyConfig:
       type: object
       additionalProperties: false

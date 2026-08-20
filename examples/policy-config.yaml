@@ -15,6 +15,9 @@ defaults:
     CRITICAL: BLOCK
   # Prefer challenge over silent allow when the scorer/profile store fails.
   fallback_action: REQUIRE_MFA
+  # RF-09 / RNF-08: score, record and publish as normal but return ALLOW to
+  # the PEP, so an operator can watch the engine before it acts on anyone.
+  monitor_only: false
 
 applications:
   demo-banking-app:

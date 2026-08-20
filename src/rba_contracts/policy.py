@@ -34,6 +34,10 @@ class PolicyBundle(BaseModel):
     score_to_level: list[ScoreBand] = Field(min_length=1)
     level_to_action: LevelToAction
     fallback_action: Action
+    # RF-09 / RNF-08: score, decide, persist and publish exactly as normal, but
+    # return ALLOW to the PEP. Lets an operator watch the engine on live traffic
+    # before it can inconvenience anyone. Off by default.
+    monitor_only: bool = False
 
     @model_validator(mode="after")
     def _bands_sorted_and_cover(self) -> PolicyBundle:
@@ -52,6 +56,7 @@ class ApplicationOverride(BaseModel):
     score_to_level: list[ScoreBand] | None = None
     level_to_action: LevelToAction | None = None
     fallback_action: Action | None = None
+    monitor_only: bool | None = None
 
 
 class PolicyConfig(BaseModel):
@@ -70,6 +75,11 @@ class PolicyConfig(BaseModel):
             score_to_level=override.score_to_level or self.defaults.score_to_level,
             level_to_action=override.level_to_action or self.defaults.level_to_action,
             fallback_action=override.fallback_action or self.defaults.fallback_action,
+            monitor_only=(
+                self.defaults.monitor_only
+                if override.monitor_only is None
+                else override.monitor_only
+            ),
         )
 
 
