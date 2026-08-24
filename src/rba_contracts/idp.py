@@ -169,9 +169,18 @@ class CallbackTokenResponse(BaseModel):
 
 
 class SessionResponse(BaseModel):
-    """GET /session when a valid token is presented."""
+    """GET /session when a valid token is presented.
+
+    ``permissions`` are the session's **effective** permissions on
+    ``application_id`` — the union of every permission carried by every role
+    held by every group the user belongs to, in ``"resource:operation"`` form
+    (ADR-0029). A relying party authorizes an operation by testing membership;
+    it never reads roles or groups directly.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     user: UserPublic
     expires_at: datetime
+    application_id: str | None = Field(default=None, min_length=1)
+    permissions: list[str] = Field(default_factory=list)

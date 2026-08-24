@@ -21,6 +21,7 @@ from rba_contracts import (
     CreateGroupRequest,
     CreateUserRequest,
     GroupDetail,
+    RoleDetail,
     DecisionMadeEvent,
     DecisionRecord,
     FeatureVectorV1,
@@ -229,8 +230,19 @@ def test_admin_examples_roundtrip() -> None:
 
     group = GroupDetail.model_validate(_load_json("admin-group.json"))
     assert group.group_id == "grp_banking"
-    assert group.grants[0].permission.value == "access"
     assert group.members[0].email == "demo@example.com"
+    # ADR-0029: a group holds roles, not an `access` grant.
+    assert group.roles[0].role_id == "role_bank_customer"
+    assert group.roles[0].application_id == "demo-banking-app"
+
+    role = RoleDetail.model_validate(_load_json("admin-role.json"))
+    assert role.permission_count == 3
+    # `scope` is derived, so it round-trips without being stored twice.
+    assert [p.scope for p in role.permissions] == [
+        "account:read",
+        "transaction:read",
+        "transfer:create",
+    ]
 
     created_group = CreateGroupRequest.model_validate(_load_json("admin-create-group.json"))
     assert created_group.name == "Banking users"

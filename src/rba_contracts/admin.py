@@ -1,26 +1,24 @@
-"""IdP-6/7 admin console contracts (users, applications, groups, decisions).
+"""Admin console contracts (users, applications, groups, roles, decisions).
 
 Policy GET/PUT reuses ``PolicyConfig``. Identity CRUD is served by ``rba-idp``;
-the decision list is the audit-service read model. Groups (IdP-7) grant
-app-scoped ``access``; they do not replace ``is_admin``.
+the decision list is the audit-service read model.
+
+**RBAC (ADR-0029).** The chain is
+``user → group → role → permission(resource, operation)``, every role scoped to
+one application. Groups answer *who*; roles answer *what you may do*. A group
+holding any role on an application is what grants sign-in to it — there is no
+separate ``access`` grant any more.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from rba_contracts.enums import Action, RiskLevel
 from rba_contracts.evaluate import Reason
-
-
-class AppPermission(str, Enum):
-    """What a group may do on a registered application. Thesis-scale: access only."""
-
-    ACCESS = "access"
 
 
 class ApplicationPublic(BaseModel):
@@ -99,11 +97,92 @@ class GroupMemberPublic(BaseModel):
     email: str = Field(min_length=1)
 
 
-class GroupGrantPublic(BaseModel):
+class PermissionPublic(BaseModel):
+    """One thing that can be done, on one application.
+
+    ``scope`` is the wire form a client checks against — ``"transfer:create"``.
+    It is derived, never stored twice.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
+    permission_id: str = Field(min_length=1)
     application_id: str = Field(min_length=1)
-    permission: AppPermission = AppPermission.ACCESS
+    resource: str = Field(min_length=1, max_length=64)
+    operation: str = Field(min_length=1, max_length=64)
+    description: str = ""
+    # Always derived from resource/operation, never trusted from input — but
+    # declared as a field rather than computed so a client can GET this object
+    # and PUT it back unchanged.
+    scope: str = ""
+
+    @model_validator(mode="after")
+    def _derive_scope(self) -> PermissionPublic:
+        object.__setattr__(self, "scope", f"{self.resource}:{self.operation}")
+        return self
+
+
+class RolePublic(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role_id: str = Field(min_length=1)
+    application_id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = ""
+    permission_count: int = Field(ge=0)
+    created_at: datetime
+
+
+class RoleDetail(RolePublic):
+    permissions: list[PermissionPublic] = Field(default_factory=list)
+
+
+class CreateRoleRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role_id: str | None = Field(default=None, min_length=1, max_length=128)
+    application_id: str = Field(min_length=1, max_length=128)
+    name: str = Field(min_length=1, max_length=128)
+    description: str = Field(default="", max_length=512)
+
+
+class PatchRoleRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = Field(default=None, min_length=1, max_length=128)
+    description: str | None = Field(default=None, max_length=512)
+
+    @model_validator(mode="after")
+    def _at_least_one(self) -> PatchRoleRequest:
+        if self.name is None and self.description is None:
+            raise ValueError("at least one field is required")
+        return self
+
+
+class SetRolePermissionsRequest(BaseModel):
+    """Replace a role's permission set wholesale. Empty list is legal (a role
+    that grants sign-in and nothing else)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    permission_ids: list[str] = Field(default_factory=list)
+
+
+class CreatePermissionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    application_id: str = Field(min_length=1, max_length=128)
+    resource: str = Field(min_length=1, max_length=64)
+    operation: str = Field(min_length=1, max_length=64)
+    description: str = Field(default="", max_length=512)
+
+
+class GroupRolePublic(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role_id: str = Field(min_length=1)
+    application_id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
 
 
 class GroupPublic(BaseModel):
@@ -118,7 +197,7 @@ class GroupPublic(BaseModel):
 
 class GroupDetail(GroupPublic):
     members: list[GroupMemberPublic] = Field(default_factory=list)
-    grants: list[GroupGrantPublic] = Field(default_factory=list)
+    roles: list[GroupRolePublic] = Field(default_factory=list)
 
 
 class CreateGroupRequest(BaseModel):
@@ -148,11 +227,10 @@ class AddGroupMemberRequest(BaseModel):
     user_id: str = Field(min_length=1)
 
 
-class CreateGroupGrantRequest(BaseModel):
+class AddGroupRoleRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    application_id: str = Field(min_length=1, max_length=128)
-    permission: AppPermission = AppPermission.ACCESS
+    role_id: str = Field(min_length=1, max_length=128)
 
 
 class DecisionRecord(BaseModel):
