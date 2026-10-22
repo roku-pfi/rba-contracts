@@ -405,6 +405,18 @@ components:
         enabled: { type: boolean }
         is_admin: { type: boolean }
         created_at: { type: string, format: date-time }
+        groups:
+          type: array
+          items: { $ref: "#/components/schemas/GroupRef" }
+        passkeys: { type: integer, minimum: 0, description: "Registered passkeys; 0 means a step-up cannot succeed (ADR-0037)" }
+        last_login_at: { type: string, format: date-time, nullable: true }
+    GroupRef:
+      type: object
+      additionalProperties: false
+      required: [group_id, name]
+      properties:
+        group_id: { type: string }
+        name: { type: string }
     CreateUserRequest:
       type: object
       additionalProperties: false

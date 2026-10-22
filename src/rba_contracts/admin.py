@@ -144,6 +144,13 @@ class PatchApplicationRequest(BaseModel):
         return self
 
 
+class GroupRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    group_id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+
+
 class AdminUserPublic(BaseModel):
     """Directory row. Password hash is never included."""
 
@@ -155,6 +162,11 @@ class AdminUserPublic(BaseModel):
     enabled: bool
     is_admin: bool
     created_at: datetime
+    # What an operator looks at first (U-2): who the user is grouped with,
+    # whether a step-up can succeed (ADR-0037), and whether the account is used.
+    groups: list[GroupRef] = Field(default_factory=list)
+    passkeys: int = Field(default=0, ge=0)
+    last_login_at: datetime | None = None
 
 
 class CreateUserRequest(BaseModel):

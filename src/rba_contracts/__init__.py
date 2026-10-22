@@ -15,6 +15,7 @@ from rba_contracts.admin import (
     DecisionRecord,
     GroupDetail,
     GroupMemberPublic,
+    GroupRef,
     GroupPublic,
     GroupRolePublic,
     PatchApplicationRequest,
@@ -102,6 +103,7 @@ __all__ = [
     "FeatureVectorV1",
     "GroupDetail",
     "GroupMemberPublic",
+    "GroupRef",
     "GroupPublic",
     "GroupRolePublic",
     "LevelToAction",
@@ -147,4 +149,4 @@ __all__ = [
     "outcome_from_action",
 ]
 
-__version__ = "0.9.0"
+__version__ = "0.12.0"
