@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://roku-pfi.github.io/rba-contracts/schemas/tenant-policy.schema.json",
+  "title": "TenantPolicy",
+  "description": "One tenant's login policy: score→level, level→action, base policy and engine mode (ADR-0033, ADR-0034). Stored by decision-service; editable without redeploy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tenant_id", "policy_version", "score_to_level", "level_to_action", "fallback_action"],
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$"
+    },
+    "policy_version": { "type": "string", "minLength": 1 },
+    "base_policy": {
+      "type": "string",
+      "enum": ["PASSWORD_ONLY", "ALWAYS_MFA"],
+      "default": "PASSWORD_ONLY",
+      "description": "What the tenant enforces on a correct password without the engine. The second factor is always the passkey."
+    },
+    "engine_mode": {
+      "type": "string",
+      "enum": ["OFF", "MONITOR", "ACTIVE"],
+      "default": "ACTIVE",
+      "description": "OFF: PDP not consulted. MONITOR: PDP scores and records, base policy enforced. ACTIVE: PDP verdict enforced."
+    },
+    "score_to_level": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/scoreBand" }
+    },
+    "level_to_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+      "properties": {
+        "LOW": { "$ref": "#/$defs/action" },
+        "MEDIUM": { "$ref": "#/$defs/action" },
+        "HIGH": { "$ref": "#/$defs/action" },
+        "CRITICAL": { "$ref": "#/$defs/action" }
+      }
+    },
+    "fallback_action": {
+      "$ref": "#/$defs/action",
+      "description": "Verdict when the scorer/profile store fails inside the PDP."
+    }
+  },
+  "$defs": {
+    "riskLevel": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+    "action": { "type": "string", "enum": ["ALLOW", "REQUIRE_MFA", "REAUTHENTICATE", "BLOCK"] },
+    "scoreBand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max", "level"],
+      "properties": {
+        "max": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Inclusive upper bound of risk_score for this level. Bands must be sorted ascending and cover up to 1.0."
+        },
+        "level": { "$ref": "#/$defs/riskLevel" }
+      }
+    }
+  }
+}

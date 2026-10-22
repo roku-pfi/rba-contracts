@@ -65,6 +65,28 @@ class LoginRequest(BaseModel):
     )
 
 
+class ConsoleLoginRequest(BaseModel):
+    """POST /console/login. Operators only; no ``application_id`` (ADR-0033).
+
+    The tenant comes from the email's domain (home realm discovery) and the
+    application is that tenant's console. Every failure — unknown domain,
+    unknown user, wrong password, no console role — answers the same
+    ``INVALID_CREDENTIALS``, so the form reveals no tenant's existence.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    email: str = Field(min_length=1)
+    password: str = Field(min_length=1)
+    ip_address: str = Field(min_length=1)
+    asn: str | None = None
+    country: str | None = None
+    device_type: str | None = None
+    os: str | None = None
+    browser: str | None = None
+    user_agent: str | None = None
+
+
 class SessionToken(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -155,6 +177,7 @@ class CallbackTokenRequest(BaseModel):
 class UserPublic(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    tenant_id: str = Field(min_length=1)
     user_id: str = Field(min_length=1)
     email: str = Field(min_length=1)
     created_at: datetime

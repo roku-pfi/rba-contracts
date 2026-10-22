@@ -1,14 +1,17 @@
 openapi: 3.1.0
 info:
   title: RBA Decision Service — Risk Evaluate API
-  version: 0.1.0
+  version: 0.9.0
   description: |
     PDP contract for the synchronous login path. Callers (PEP) authenticate the
     user first, then POST here for a risk decision. The service *decides*; the
     caller *enforces*.
 
-    Evaluate path frozen in Phase 2 (`rba-contracts` v0.1.0). `GET`/`PUT /policy`
-    is additive in 0.3.0 (IdP-6 admin). Implemented by `rba-decision-service`.
+    Evaluate path frozen in Phase 2 (`rba-contracts` v0.1.0). 0.9.0 makes it
+    multi-tenant (ADR-0033): every request names its tenant, policy is one
+    `TenantPolicy` per tenant, and the response separates the engine's verdict
+    (`action`) from what the PEP must apply (`enforced_action`, ADR-0034).
+    Implemented by `rba-decision-service`.
   contact:
     name: roku-pfi
     url: https://github.com/roku-pfi
@@ -19,42 +22,52 @@ tags:
   - name: risk
     description: Login-risk evaluation
   - name: policy
-    description: Versioned score→level / level→action config (IdP-6)
+    description: One login policy per tenant (ADR-0033, ADR-0034)
 paths:
-  /policy:
+  /tenants/{tenant_id}/policy:
+    parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
     get:
       tags: [policy]
-      operationId: getPolicy
-      summary: Return the active PolicyConfig
+      operationId: getTenantPolicy
+      summary: Return a tenant's policy
       responses:
         "200":
-          description: Current score→level / level→action bundle
+          description: The tenant's current policy
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PolicyConfig"
+                $ref: "#/components/schemas/TenantPolicy"
+        "404":
+          description: No policy for this tenant
     put:
       tags: [policy]
-      operationId: putPolicy
-      summary: Replace the active PolicyConfig (in-process + YAML persist)
+      operationId: putTenantPolicy
+      summary: Replace a tenant's policy
       description: |
-        Control-plane write used by the IdP-6 admin console. The next
-        `/risk/evaluate` uses the new bundle. Identity never lives here.
+        Control-plane write used by the admin console (the IdP proxies it after
+        checking the caller may act on this tenant). Stored in Postgres; every
+        replica picks it up within its cache interval (RNF-05, RNF-10).
+        Identity never lives here.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PolicyConfig"
+              $ref: "#/components/schemas/TenantPolicy"
       responses:
         "200":
           description: Policy now active
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PolicyConfig"
+                $ref: "#/components/schemas/TenantPolicy"
         "422":
-          description: Invalid policy (unsorted bands / missing max=1.0)
+          description: Invalid policy (unsorted bands, missing max=1.0, or tenant_id in the body differs from the path)
   /risk/evaluate:
     post:
       tags: [risk]
@@ -128,6 +141,7 @@ components:
       additionalProperties: false
       required:
         - event_id
+        - tenant_id
         - application_id
         - user_id
         - timestamp
@@ -137,10 +151,14 @@ components:
           type: string
           format: uuid
           description: Caller-supplied idempotency / correlation id. Reused on the outbox event.
+        tenant_id:
+          type: string
+          minLength: 1
+          description: Selects the tenant's policy; recorded on the decision (ADR-0033).
         application_id:
           type: string
           minLength: 1
-          description: Selects the policy bundle (app sensitivity overrides).
+          description: The application the user is signing in to. Recorded, not used to pick policy.
         user_id:
           type: string
           minLength: 1
@@ -174,6 +192,10 @@ components:
         device_id:
           type: string
           description: Optional stable device id; not consumed by FeatureVectorV1.
+        simulated:
+          type: boolean
+          default: false
+          description: Country/ASN came from the presenter override, not the client address (ADR-0032). Scored normally, flagged on the record.
       description: |
         Fields mirror the Wiefling/canonical LoginEvent names used by rba-features
         (see schema.RAW_TO_FIELD). Latitude/longitude and RTT are intentionally
@@ -186,6 +208,8 @@ components:
         - risk_score
         - risk_level
         - action
+        - enforced_action
+        - engine_mode
         - reasons
         - model_version
         - policy_version
@@ -205,6 +229,12 @@ components:
           $ref: "#/components/schemas/RiskLevel"
         action:
           $ref: "#/components/schemas/Action"
+          description: The engine's verdict, escalation floors included. Recorded in every mode.
+        enforced_action:
+          $ref: "#/components/schemas/Action"
+          description: What the PEP must apply. Equals `action` when the tenant's engine is ACTIVE; the base policy's action when MONITOR.
+        engine_mode:
+          $ref: "#/components/schemas/EngineMode"
         reasons:
           type: array
           items:
@@ -223,12 +253,6 @@ components:
         scored_at:
           type: string
           format: date-time
-        monitored_action:
-          $ref: "#/components/schemas/Action"
-          description: >-
-            Monitor-only mode (RF-09). The action the engine decided but did not
-            enforce. Present only while monitor_only is on, in which case
-            `action` is always ALLOW and the PEP must let the login through.
     ScoreBand:
       type: object
       additionalProperties: false
@@ -245,11 +269,25 @@ components:
         MEDIUM: { $ref: "#/components/schemas/Action" }
         HIGH: { $ref: "#/components/schemas/Action" }
         CRITICAL: { $ref: "#/components/schemas/Action" }
-    PolicyBundle:
+    BasePolicy:
+      type: string
+      enum: [PASSWORD_ONLY, ALWAYS_MFA]
+      description: What the tenant enforces on a correct password without the engine. The second factor is always the passkey.
+    EngineMode:
+      type: string
+      enum: [OFF, MONITOR, ACTIVE]
+      description: "OFF: PDP not consulted. MONITOR: PDP scores and records, base policy enforced. ACTIVE: PDP verdict enforced."
+    TenantPolicy:
       type: object
       additionalProperties: false
-      required: [score_to_level, level_to_action, fallback_action]
+      required: [tenant_id, policy_version, score_to_level, level_to_action, fallback_action]
       properties:
+        tenant_id: { type: string, pattern: "^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$" }
+        policy_version: { type: string, minLength: 1 }
+        base_policy:
+          $ref: "#/components/schemas/BasePolicy"
+        engine_mode:
+          $ref: "#/components/schemas/EngineMode"
         score_to_level:
           type: array
           minItems: 1
@@ -259,41 +297,6 @@ components:
           $ref: "#/components/schemas/LevelToAction"
         fallback_action:
           $ref: "#/components/schemas/Action"
-        monitor_only:
-          type: boolean
-          default: false
-          description: >-
-            RF-09 / RNF-08. Score, decide, persist and publish as normal but
-            return ALLOW to the PEP, so an operator can watch the engine on live
-            traffic before it can act on anyone.
-    ApplicationOverride:
-      type: object
-      additionalProperties: false
-      properties:
-        sensitivity: { type: string, enum: [low, standard, high, critical] }
-        score_to_level:
-          type: array
-          items:
-            $ref: "#/components/schemas/ScoreBand"
-        level_to_action:
-          $ref: "#/components/schemas/LevelToAction"
-        fallback_action:
-          $ref: "#/components/schemas/Action"
-        monitor_only:
-          type: boolean
-          description: Per-application override of the default monitor_only.
-    PolicyConfig:
-      type: object
-      additionalProperties: false
-      required: [policy_version, defaults]
-      properties:
-        policy_version: { type: string, minLength: 1 }
-        defaults:
-          $ref: "#/components/schemas/PolicyBundle"
-        applications:
-          type: object
-          additionalProperties:
-            $ref: "#/components/schemas/ApplicationOverride"
     Error:
       type: object
       additionalProperties: false
@@ -309,7 +312,8 @@ components:
       summary: Successful login from a new device
       value:
         event_id: "4f9a8c2e-1b3d-4a6f-9c8e-2d1b3a6f9c8e"
-        application_id: "demo-banking-app"
+        tenant_id: "roku-bank"
+        application_id: "roku-bank-web"
         user_id: "user-123"
         timestamp: "2026-08-08T15:30:00Z"
         ip_address: "203.0.113.10"
@@ -326,6 +330,8 @@ components:
         risk_score: 0.61
         risk_level: MEDIUM
         action: REQUIRE_MFA
+        enforced_action: REQUIRE_MFA
+        engine_mode: MONITOR
         reasons:
           - code: signal_novel
             signal: device_type

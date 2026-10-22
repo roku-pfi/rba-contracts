@@ -3,6 +3,8 @@
   "risk_score": 0.61,
   "risk_level": "MEDIUM",
   "action": "REQUIRE_MFA",
+  "enforced_action": "REQUIRE_MFA",
+  "engine_mode": "MONITOR",
   "reasons": [
     {
       "code": "signal_novel",

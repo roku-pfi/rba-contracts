@@ -49,6 +49,32 @@ paths:
                   $ref: "#/components/examples/LoginResponseMfa"
         "400":
           description: Invalid request
+  /console/login:
+    post:
+      tags: [login]
+      operationId: consoleLogin
+      summary: Operator sign-in; the email's domain selects the tenant (ADR-0033)
+      description: >-
+        No application_id: the server maps the email domain to the tenant that
+        registered it and signs the operator into that tenant's console. An
+        unknown domain, unknown user, wrong password and a user without a
+        console role all answer INVALID_CREDENTIALS, so the form reveals no
+        tenant. Successful logins are scored under the tenant's policy.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConsoleLoginRequest"
+      responses:
+        "200":
+          description: Outcome, as for /login
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "422":
+          description: Invalid request (including any application_id)
   /mfa/verify:
     post:
       tags: [login]
@@ -172,6 +198,20 @@ components:
         - BLOCKED
         - INVALID_CREDENTIALS
         - ACCESS_DENIED
+    ConsoleLoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, ip_address]
+      properties:
+        email: { type: string, minLength: 1 }
+        password: { type: string, minLength: 1, description: Never echoed on responses. }
+        ip_address: { type: string, minLength: 1 }
+        asn: { type: string }
+        country: { type: string }
+        device_type: { type: string }
+        os: { type: string }
+        browser: { type: string }
+        user_agent: { type: string }
     LoginRequest:
       type: object
       additionalProperties: false
@@ -315,8 +355,9 @@ components:
     UserPublic:
       type: object
       additionalProperties: false
-      required: [user_id, email, created_at]
+      required: [tenant_id, user_id, email, created_at]
       properties:
+        tenant_id: { type: string }
         user_id: { type: string }
         email: { type: string }
         created_at:
@@ -356,9 +397,9 @@ components:
   examples:
     LoginRequestDemo:
       value:
-        email: demo@example.com
-        password: demo-password
-        application_id: demo-banking-app
+        email: martin@correo.example
+        password: martin-demo
+        application_id: roku-bank-web
         ip_address: "203.0.113.10"
         asn: "13335"
         country: AR

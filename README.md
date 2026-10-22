@@ -4,7 +4,10 @@ Versioned **API / event / feature / model / policy** contracts for the RBA
 polyrepo. This library exists to defeat **contract drift** between services —
 the counterpart of `rba-features` defeating train/serve skew.
 
-Package version: **0.6.0** (Demo-4 WebAuthn MFA options/verify; mock OTP remains).
+Package version: **0.9.0** — multi-tenant (ADR-0033): `tenant_id` on evaluate,
+decision and event; one `TenantPolicy` per tenant with `base_policy` and
+`engine_mode`; the response separates the engine's verdict (`action`) from what
+the PEP applies (`enforced_action`, ADR-0034). Earlier: WebAuthn (0.6.0), RBAC (0.8.0).
 PDP / feature / policy freeze was **v0.1.0**
 ([ADR-0008](../docs/decisions/0008-contracts-freeze.md));
 `LoginEventSnapshot` landed in **v0.1.1**; IdP login API in **v0.2.0**;
@@ -21,12 +24,12 @@ Pydantic models under `src/rba_contracts/` are what Python services import.
 |---|---|---|
 | Feature schema | `schemas/feature-vector.schema.json` + `FeatureVectorV1` | Names, types, order (`FEATURE_NAMES`) |
 | Model I/O | `schemas/model-prediction.schema.json`, `model-artifact.schema.json` | `predict_proba`-compatible score + artifact metadata |
-| PDP API | `openapi/risk-evaluate.yaml` | `POST /risk/evaluate`, `GET`/`PUT /policy` |
+| PDP API | `openapi/risk-evaluate.yaml` | `POST /risk/evaluate`, `GET`/`PUT /tenants/{tenant_id}/policy` |
 | IdP API | `openapi/idp.yaml` | `POST /login`, `/mfa/verify` (mock OTP), `/mfa/webauthn/*`, `GET /session`, `POST /logout`, `POST /callback/token` |
-| IdP admin | `openapi/idp-admin.yaml` | `/admin/api` users, apps, groups, decisions, policy |
+| IdP admin | `openapi/idp-admin.yaml` | `/admin/api` users, apps, groups, decisions, policy — **stale** (pre-RBAC); rewritten with the tenant-scoped admin API (T-5). The Pydantic models in `admin.py` are current. |
 | Audit read | `openapi/audit.yaml` | `GET /decisions` (IdP-6 decision browser) |
 | Bus event | `asyncapi/decision-events.yaml` | `rba.decision.made.v1` (outbox / `event_id`) |
-| Policy config | `schemas/policy-config.schema.json` + `examples/policy-config.yaml` | score→level / level→action |
+| Tenant policy | `schemas/tenant-policy.schema.json` + `examples/tenant-policy-*.yaml` | base policy, engine mode, score→level, level→action — one per tenant |
 
 Canonical JSON examples live in `examples/` and are validated by
 `tests/test_contracts.py` against both JSON Schema and the Pydantic models.
@@ -83,14 +86,23 @@ Response: `risk_score` ∈ [0, 1], `risk_level`, `action`, `reasons[]`,
 
 `RiskLevel`: `LOW` · `MEDIUM` · `HIGH` · `CRITICAL`.
 
-Policy maps score→level (sorted bands covering up to `max=1.0`) then
-level→action. Per-application overrides are allowed. Scorer/profile failure
-uses `fallback_action` and sets `fallback=true` (`risk_score` is then
-non-informative). Helper: `apply_policy(score, config, application_id)`.
+Each tenant has one `TenantPolicy`. It maps score→level (sorted bands covering
+up to `max=1.0`) then level→action, which gives the engine's **verdict**
+(`apply_policy(score, policy)`). Scorer/profile failure uses `fallback_action`
+and sets `fallback=true` (`risk_score` is then non-informative).
 
-Default example bands (`examples/policy-config.yaml`): ≤0.30 LOW, ≤0.60
-MEDIUM, ≤0.80 HIGH, else CRITICAL. `demo-banking-app` is tighter;
-`demo-forum-app` is looser.
+What the PEP **enforces** depends on the tenant's `engine_mode`
+(`enforced_action(verdict, policy)`, ADR-0034):
+
+| `engine_mode` | PDP called | Enforced |
+|---|---|---|
+| `OFF` | no | `base_policy` (`PASSWORD_ONLY` → ALLOW, `ALWAYS_MFA` → REQUIRE_MFA) |
+| `MONITOR` | yes, verdict recorded | `base_policy` |
+| `ACTIVE` | yes | the verdict |
+
+Examples: `roku-bank` (ALWAYS_MFA + MONITOR, tight bands), `kaze-labs`
+(PASSWORD_ONLY + ACTIVE), `rokusec` (ACTIVE with LOW → REQUIRE_MFA: always a
+passkey, plus escalation).
 
 ### Freeman vs policy scale
 

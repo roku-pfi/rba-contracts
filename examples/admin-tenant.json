@@ -1,0 +1,16 @@
+{
+  "tenant_id": "roku-bank",
+  "name": "Roku Bank",
+  "operator_domains": [
+    "rokubank.example"
+  ],
+  "branding": {
+    "display_name": "Roku Bank",
+    "login_style": "tenant",
+    "logo_url": null,
+    "primary_colour": "#0B6E4F",
+    "accent_colour": "#073B2A"
+  },
+  "is_platform": false,
+  "created_at": "2026-10-21T12:00:00Z"
+}

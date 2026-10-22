@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from rba_contracts.enums import Action, RiskLevel
+from rba_contracts.enums import Action, EngineMode, RiskLevel
 from rba_contracts.evaluate import Reason
 from rba_contracts.features import FeatureVectorV1
 
@@ -52,11 +52,15 @@ class DecisionMadeEvent(BaseModel):
 
     event_id: UUID
     occurred_at: datetime
+    tenant_id: str = Field(min_length=1)
     application_id: str
     user_id: str
     risk_score: float = Field(ge=0.0, le=1.0)
     risk_level: RiskLevel
     action: Action
+    enforced_action: Action
+    engine_mode: EngineMode
+    simulated: bool = False
     model_version: str
     policy_version: str
     feature_schema_version: str

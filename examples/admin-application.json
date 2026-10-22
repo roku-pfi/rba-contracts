@@ -1,5 +1,6 @@
 {
-  "application_id": "demo-banking-app",
+  "tenant_id": "roku-bank",
+  "application_id": "roku-bank-web",
   "name": "Demo banking app",
   "enabled": true,
   "created_at": "2026-08-15T12:00:00Z",

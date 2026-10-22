@@ -1,7 +1,12 @@
-"""Admin console contracts (users, applications, groups, roles, decisions).
+"""Admin console contracts (tenants, users, applications, groups, roles, decisions).
 
-Policy GET/PUT reuses ``PolicyConfig``. Identity CRUD is served by ``rba-idp``;
+Policy GET/PUT reuses ``TenantPolicy``. Identity CRUD is served by ``rba-idp``;
 the decision list is the audit-service read model.
+
+**Tenancy (ADR-0033).** Every directory object belongs to exactly one tenant.
+Create requests carry no ``tenant_id``: the tenant comes from the operator's
+session (or, for a platform operator, from the tenant they switched to), never
+from the request body.
 
 **RBAC (ADR-0029).** The chain is
 ``user → group → role → permission(resource, operation)``, every role scoped to
@@ -13,17 +18,100 @@ separate ``access`` grant any more.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from rba_contracts.enums import Action, RiskLevel
+from rba_contracts.enums import Action, EngineMode, RiskLevel
 from rba_contracts.evaluate import Reason
+
+
+# ---------------------------------------------------------------- tenants
+
+HEX_COLOUR = r"^#[0-9A-Fa-f]{6}$"
+# Lowercase DNS name with at least one dot: "rokubank.example".
+EMAIL_DOMAIN = r"^(?=.{3,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$"
+TENANT_ID = r"^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$"
+
+
+class TenantBranding(BaseModel):
+    """How the hosted login looks for this tenant's applications (ADR-0036).
+
+    ``rokusec``: RokuSec's own login ("Continuá a Kaze Labs").
+    ``tenant``: the tenant's name, logo and colours, with a small
+    "Protegido por RokuSec" seal. Either way the page is served by the IdP.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    display_name: str = Field(min_length=1, max_length=128)
+    login_style: Literal["rokusec", "tenant"] = "rokusec"
+    logo_url: str | None = Field(default=None, max_length=512)
+    primary_colour: str = Field(default="#1466E5", pattern=HEX_COLOUR)
+    accent_colour: str = Field(default="#152953", pattern=HEX_COLOUR)
+
+
+class TenantPublic(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    tenant_id: str = Field(pattern=TENANT_ID)
+    name: str = Field(min_length=1, max_length=128)
+    # Console sign-in is routed by these (home realm discovery). A domain
+    # belongs to one tenant across the platform.
+    operator_domains: list[str] = Field(default_factory=list)
+    branding: TenantBranding
+    # The platform tenant (RokuSec itself): its operators may switch tenants.
+    is_platform: bool = False
+    created_at: datetime
+
+
+class CreateTenantRequest(BaseModel):
+    """Platform operators only."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    tenant_id: str = Field(pattern=TENANT_ID)
+    name: str = Field(min_length=1, max_length=128)
+    operator_domains: list[str] = Field(default_factory=list)
+    branding: TenantBranding | None = None
+
+    @model_validator(mode="after")
+    def _domains(self) -> CreateTenantRequest:
+        _check_domains(self.operator_domains)
+        return self
+
+
+class PatchTenantRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = Field(default=None, min_length=1, max_length=128)
+    operator_domains: list[str] | None = None
+    branding: TenantBranding | None = None
+
+    @model_validator(mode="after")
+    def _at_least_one(self) -> PatchTenantRequest:
+        if self.name is None and self.operator_domains is None and self.branding is None:
+            raise ValueError("at least one field is required")
+        if self.operator_domains is not None:
+            _check_domains(self.operator_domains)
+        return self
+
+
+def _check_domains(domains: list[str]) -> None:
+    import re
+
+    for d in domains:
+        if not re.fullmatch(EMAIL_DOMAIN, d):
+            raise ValueError(f"not a lowercase email domain: {d!r}")
+    if len(set(domains)) != len(domains):
+        raise ValueError("operator_domains must be unique")
 
 
 class ApplicationPublic(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    tenant_id: str = Field(min_length=1)
     application_id: str = Field(min_length=1)
     name: str = Field(min_length=1)
     enabled: bool
@@ -61,6 +149,7 @@ class AdminUserPublic(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    tenant_id: str = Field(min_length=1)
     user_id: str = Field(min_length=1)
     email: str = Field(min_length=1)
     enabled: bool
@@ -125,6 +214,7 @@ class PermissionPublic(BaseModel):
 class RolePublic(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    tenant_id: str = Field(min_length=1)
     role_id: str = Field(min_length=1)
     application_id: str = Field(min_length=1)
     name: str = Field(min_length=1)
@@ -188,6 +278,7 @@ class GroupRolePublic(BaseModel):
 class GroupPublic(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    tenant_id: str = Field(min_length=1)
     group_id: str = Field(min_length=1)
     name: str = Field(min_length=1)
     description: str = ""
@@ -240,11 +331,18 @@ class DecisionRecord(BaseModel):
 
     event_id: UUID
     occurred_at: datetime
+    tenant_id: str = Field(min_length=1)
     application_id: str = Field(min_length=1)
     user_id: str = Field(min_length=1)
     risk_score: float = Field(ge=0.0, le=1.0)
     risk_level: RiskLevel
+    # The engine's verdict, and what was actually applied (ADR-0034). They
+    # differ while the tenant's engine is in MONITOR.
     action: Action
+    enforced_action: Action
+    engine_mode: EngineMode
+    # Country/ASN came from the presenter override (ADR-0032).
+    simulated: bool = False
     reasons: list[Reason] = Field(default_factory=list)
     model_version: str = Field(min_length=1)
     policy_version: str = Field(min_length=1)

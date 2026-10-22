@@ -35,12 +35,17 @@ from rba_contracts import (
     ModelArtifactMetadata,
     PatchGroupRequest,
     PatchUserRequest,
-    PolicyConfig,
     RiskEvaluateRequest,
     RiskEvaluateResponse,
     RiskLevel,
     SessionResponse,
+    TenantPolicy,
+    TenantPublic,
+    BasePolicy,
+    CreateTenantRequest,
+    EngineMode,
     apply_policy,
+    enforced_action,
     outcome_from_action,
 )
 
@@ -115,49 +120,96 @@ def test_decision_made_event_example() -> None:
     assert event.features.device_type_seen_before == 0
 
 
-def test_policy_config_example_and_apply() -> None:
-    raw = yaml.safe_load((EXAMPLES / "policy-config.yaml").read_text())
-    Draft202012Validator(_schema("policy-config.schema.json")).validate(raw)
-    cfg = PolicyConfig.model_validate(raw)
+def _tenant_policy(name: str) -> dict:
+    return yaml.safe_load((EXAMPLES / f"tenant-policy-{name}.yaml").read_text())
 
-    level, action = apply_policy(0.10, cfg, "unknown-app")
-    assert level == RiskLevel.LOW and action == Action.ALLOW
 
-    level, action = apply_policy(0.61, cfg, "unknown-app")
-    assert level == RiskLevel.HIGH and action == Action.REAUTHENTICATE
+@pytest.mark.parametrize("name", ["roku-bank", "kaze-labs", "rokusec"])
+def test_tenant_policy_examples_match_schema(name: str) -> None:
+    raw = _tenant_policy(name)
+    Draft202012Validator(_schema("tenant-policy.schema.json")).validate(raw)
+    assert TenantPolicy.model_validate(raw).tenant_id == name
 
-    # High-sensitivity demo app has tighter bands: 0.61 → HIGH; 0.75 → CRITICAL.
-    level, action = apply_policy(0.61, cfg, "demo-banking-app")
-    assert level == RiskLevel.HIGH and action == Action.REAUTHENTICATE
-    level, action = apply_policy(0.75, cfg, "demo-banking-app")
-    assert level == RiskLevel.CRITICAL and action == Action.BLOCK
 
-    level, action = apply_policy(0.0, cfg, "demo-banking-app", fallback=True)
-    assert action == Action.REQUIRE_MFA
-    assert level == RiskLevel.MEDIUM  # lowest level mapped to REQUIRE_MFA in defaults merge
+def test_apply_policy_bands_and_fallback() -> None:
+    bank = TenantPolicy.model_validate(_tenant_policy("roku-bank"))
+    assert apply_policy(0.10, bank) == (RiskLevel.LOW, Action.ALLOW)
+    assert apply_policy(0.61, bank) == (RiskLevel.HIGH, Action.REAUTHENTICATE)
+    assert apply_policy(0.75, bank) == (RiskLevel.CRITICAL, Action.BLOCK)
+    # Scorer failure: the fallback action at the lowest level that maps to it.
+    assert apply_policy(0.0, bank, fallback=True) == (RiskLevel.MEDIUM, Action.REQUIRE_MFA)
+
+
+def test_enforced_action_follows_engine_mode() -> None:
+    """ADR-0034: MONITOR keeps the tenant's existing control; ACTIVE applies the verdict."""
+    bank = TenantPolicy.model_validate(_tenant_policy("roku-bank"))
+    assert (bank.base_policy, bank.engine_mode) == (BasePolicy.ALWAYS_MFA, EngineMode.MONITOR)
+    # Monitoring: the engine would allow, but the bank still asks for the passkey…
+    assert enforced_action(Action.ALLOW, bank) == Action.REQUIRE_MFA
+    # …and a verdict the engine would block is not enforced either.
+    assert enforced_action(Action.BLOCK, bank) == Action.REQUIRE_MFA
+
+    active = bank.model_copy(update={"engine_mode": EngineMode.ACTIVE})
+    assert enforced_action(Action.ALLOW, active) == Action.ALLOW
+    assert enforced_action(Action.BLOCK, active) == Action.BLOCK
+
+    off = bank.model_copy(update={"engine_mode": EngineMode.OFF, "base_policy": BasePolicy.PASSWORD_ONLY})
+    assert enforced_action(Action.BLOCK, off) == Action.ALLOW
+
+
+def test_platform_tenant_always_asks_for_a_passkey() -> None:
+    """The ladder alone gives 'always MFA plus escalation' under ACTIVE."""
+    platform = TenantPolicy.model_validate(_tenant_policy("rokusec"))
+    _, verdict = apply_policy(0.0, platform)
+    assert enforced_action(verdict, platform) == Action.REQUIRE_MFA
+    _, verdict = apply_policy(0.99, platform)
+    assert enforced_action(verdict, platform) == Action.BLOCK
 
 
 def test_policy_rejects_unsorted_bands() -> None:
+    raw = _tenant_policy("kaze-labs")
+    raw["score_to_level"] = [
+        {"max": 0.8, "level": "HIGH"},
+        {"max": 0.3, "level": "LOW"},
+        {"max": 1.0, "level": "CRITICAL"},
+    ]
     with pytest.raises(Exception):
-        PolicyConfig.model_validate(
-            {
-                "policy_version": "x",
-                "defaults": {
-                    "score_to_level": [
-                        {"max": 0.8, "level": "HIGH"},
-                        {"max": 0.3, "level": "LOW"},
-                        {"max": 1.0, "level": "CRITICAL"},
-                    ],
-                    "level_to_action": {
-                        "LOW": "ALLOW",
-                        "MEDIUM": "REQUIRE_MFA",
-                        "HIGH": "REAUTHENTICATE",
-                        "CRITICAL": "BLOCK",
-                    },
-                    "fallback_action": "REQUIRE_MFA",
-                },
-            }
+        TenantPolicy.model_validate(raw)
+
+
+def test_tenant_examples_and_domain_rules() -> None:
+    tenant = TenantPublic.model_validate(_load_json("admin-tenant.json"))
+    assert tenant.operator_domains == ["rokubank.example"]
+    assert tenant.branding.login_style == "tenant"
+    assert tenant.is_platform is False
+
+    CreateTenantRequest.model_validate(
+        {"tenant_id": "kaze-labs", "name": "Kaze Labs", "operator_domains": ["kazelabs.example"]}
+    )
+    for bad in (["KazeLabs.example"], ["kazelabs"], ["a.example", "a.example"]):
+        with pytest.raises(Exception):
+            CreateTenantRequest.model_validate(
+                {"tenant_id": "kaze-labs", "name": "Kaze Labs", "operator_domains": bad}
+            )
+    with pytest.raises(Exception):
+        CreateTenantRequest.model_validate({"tenant_id": "Kaze Labs", "name": "x"})
+
+
+def test_evaluate_and_event_carry_tenant_and_enforcement() -> None:
+    req = RiskEvaluateRequest.model_validate(_load_json("evaluate-request.json"))
+    assert req.tenant_id == "roku-bank" and req.simulated is False
+    with pytest.raises(Exception):
+        RiskEvaluateRequest.model_validate(
+            {k: v for k, v in _load_json("evaluate-request.json").items() if k != "tenant_id"}
         )
+    resp = RiskEvaluateResponse.model_validate(_load_json("evaluate-response.json"))
+    assert (resp.enforced_action, resp.engine_mode) == (Action.REQUIRE_MFA, EngineMode.MONITOR)
+    assert "monitored_action" not in RiskEvaluateResponse.model_fields
+
+    event = DecisionMadeEvent.model_validate(_load_json("decision-made-event.json"))
+    assert event.tenant_id == "roku-bank"
+    record = DecisionRecord.model_validate(_load_json("admin-decision.json"))
+    assert record.tenant_id == event.tenant_id
 
 
 def test_feature_names_match_rba_features_when_installed() -> None:
@@ -200,6 +252,7 @@ def test_idp_login_examples_roundtrip() -> None:
     session = SessionResponse.model_validate(_load_json("idp-session-response.json"))
     assert session.user.email == "demo@example.com"
     assert session.user.is_admin is False
+    assert session.user.tenant_id == "roku-bank"
 
     token_req = CallbackTokenRequest.model_validate(
         _load_json("idp-callback-token-request.json")
@@ -218,7 +271,8 @@ def test_admin_examples_roundtrip() -> None:
     assert "password" not in AdminUserPublic.model_fields
 
     app = ApplicationPublic.model_validate(_load_json("admin-application.json"))
-    assert app.application_id == "demo-banking-app"
+    assert app.application_id == "roku-bank-web"
+    assert app.tenant_id == "roku-bank"
     assert app.redirect_uri == "http://localhost:8002/callback"
 
     created = CreateUserRequest.model_validate(_load_json("admin-create-user.json"))
@@ -233,7 +287,7 @@ def test_admin_examples_roundtrip() -> None:
     assert group.members[0].email == "demo@example.com"
     # ADR-0029: a group holds roles, not an `access` grant.
     assert group.roles[0].role_id == "role_bank_customer"
-    assert group.roles[0].application_id == "demo-banking-app"
+    assert group.roles[0].application_id == "roku-bank-web"
 
     role = RoleDetail.model_validate(_load_json("admin-role.json"))
     assert role.permission_count == 3

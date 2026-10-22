@@ -33,11 +33,15 @@ components:
           payload:
             event_id: "4f9a8c2e-1b3d-4a6f-9c8e-2d1b3a6f9c8e"
             occurred_at: "2026-08-08T15:30:00.042Z"
-            application_id: "demo-banking-app"
+            tenant_id: "roku-bank"
+            application_id: "roku-bank-web"
             user_id: "user-123"
             risk_score: 0.61
             risk_level: MEDIUM
             action: REQUIRE_MFA
+            enforced_action: REQUIRE_MFA
+            engine_mode: MONITOR
+            simulated: false
             model_version: "freeman-0.1.0"
             policy_version: "1.0.0"
             feature_schema_version: "1.0.0"
@@ -105,11 +109,14 @@ components:
       required:
         - event_id
         - occurred_at
+        - tenant_id
         - application_id
         - user_id
         - risk_score
         - risk_level
         - action
+        - enforced_action
+        - engine_mode
         - model_version
         - policy_version
         - feature_schema_version
@@ -122,6 +129,7 @@ components:
         occurred_at:
           type: string
           format: date-time
+        tenant_id: { type: string, description: "ADR-0033. Consumers must keep it on every row they derive." }
         application_id: { type: string }
         user_id: { type: string }
         risk_score:
@@ -132,6 +140,12 @@ components:
           $ref: "#/components/schemas/RiskLevel"
         action:
           $ref: "#/components/schemas/Action"
+          description: The engine's verdict.
+        enforced_action:
+          $ref: "#/components/schemas/Action"
+          description: What was applied (differs from `action` while the tenant is in MONITOR, ADR-0034).
+        engine_mode: { type: string, enum: [OFF, MONITOR, ACTIVE] }
+        simulated: { type: boolean, default: false, description: "Country/ASN from the presenter override (ADR-0032)." }
         model_version: { type: string }
         policy_version: { type: string }
         feature_schema_version: { type: string }

@@ -1,11 +1,15 @@
 {
   "event_id": "4f9a8c2e-1b3d-4a6f-9c8e-2d1b3a6f9c8e",
   "occurred_at": "2026-08-15T12:00:00Z",
-  "application_id": "demo-banking-app",
+  "tenant_id": "roku-bank",
+  "application_id": "roku-bank-web",
   "user_id": "usr_demo",
   "risk_score": 0.61,
   "risk_level": "MEDIUM",
   "action": "REQUIRE_MFA",
+  "enforced_action": "REQUIRE_MFA",
+  "engine_mode": "MONITOR",
+  "simulated": false,
   "reasons": [
     {
       "code": "signal_novel",

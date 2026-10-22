@@ -1,7 +1,7 @@
 {
   "email": "demo@example.com",
   "password": "demo-password",
-  "application_id": "demo-banking-app",
+  "application_id": "roku-bank-web",
   "ip_address": "203.0.113.10",
   "asn": "13335",
   "country": "AR",

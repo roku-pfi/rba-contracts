@@ -1,4 +1,5 @@
 {
+  "tenant_id": "roku-bank",
   "group_id": "grp_banking",
   "name": "Banking customers",
   "description": "Retail customers of the demo bank",
@@ -13,7 +14,7 @@
   "roles": [
     {
       "role_id": "role_bank_customer",
-      "application_id": "demo-banking-app",
+      "application_id": "roku-bank-web",
       "name": "customer"
     }
   ]

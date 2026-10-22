@@ -6,6 +6,7 @@ from rba_contracts.admin import (
     AdminUserPublic,
     ApplicationPublic,
     CreateApplicationRequest,
+    CreateTenantRequest,
     CreateGroupRequest,
     CreatePermissionRequest,
     CreateRoleRequest,
@@ -19,13 +20,16 @@ from rba_contracts.admin import (
     PatchApplicationRequest,
     PatchGroupRequest,
     PatchRoleRequest,
+    PatchTenantRequest,
     PatchUserRequest,
     PermissionPublic,
     RoleDetail,
     RolePublic,
     SetRolePermissionsRequest,
+    TenantBranding,
+    TenantPublic,
 )
-from rba_contracts.enums import Action, RiskLevel
+from rba_contracts.enums import Action, BasePolicy, EngineMode, RiskLevel
 from rba_contracts.evaluate import Reason, RiskEvaluateRequest, RiskEvaluateResponse
 from rba_contracts.events import DECISION_MADE_CHANNEL, DecisionMadeEvent, LoginEventSnapshot
 from rba_contracts.features import FEATURE_NAMES, FEATURE_SCHEMA_VERSION, FeatureVectorV1
@@ -38,6 +42,7 @@ from rba_contracts.model import (
 from rba_contracts.idp import (
     CallbackTokenRequest,
     CallbackTokenResponse,
+    ConsoleLoginRequest,
     LoginOutcome,
     LoginRequest,
     LoginResponse,
@@ -51,7 +56,14 @@ from rba_contracts.idp import (
     WebAuthnCeremonyMode,
     outcome_from_action,
 )
-from rba_contracts.policy import PolicyConfig, apply_policy
+from rba_contracts.policy import (
+    LevelToAction,
+    ScoreBand,
+    TenantPolicy,
+    apply_policy,
+    base_action,
+    enforced_action,
+)
 
 __all__ = [
     "Action",
@@ -59,17 +71,21 @@ __all__ = [
     "AddGroupRoleRequest",
     "AdminUserPublic",
     "ApplicationPublic",
+    "BasePolicy",
     "CallbackTokenRequest",
     "CallbackTokenResponse",
+    "ConsoleLoginRequest",
     "CreateApplicationRequest",
     "CreateGroupRequest",
     "CreatePermissionRequest",
     "CreateRoleRequest",
+    "CreateTenantRequest",
     "CreateUserRequest",
     "DECISION_MADE_CHANNEL",
     "DecisionListResponse",
     "DecisionMadeEvent",
     "DecisionRecord",
+    "EngineMode",
     "FEATURE_NAMES",
     "FEATURE_SCHEMA_VERSION",
     "FREEMAN_FEATURES",
@@ -78,6 +94,7 @@ __all__ = [
     "GroupMemberPublic",
     "GroupPublic",
     "GroupRolePublic",
+    "LevelToAction",
     "LoginEventSnapshot",
     "LoginOutcome",
     "LoginRequest",
@@ -91,23 +108,29 @@ __all__ = [
     "PatchApplicationRequest",
     "PatchGroupRequest",
     "PatchRoleRequest",
+    "PatchTenantRequest",
     "PatchUserRequest",
     "PermissionPublic",
-    "PolicyConfig",
     "Reason",
     "RiskEvaluateRequest",
     "RiskEvaluateResponse",
     "RiskLevel",
     "RoleDetail",
     "RolePublic",
+    "ScoreBand",
     "SessionResponse",
     "SessionToken",
     "SetRolePermissionsRequest",
     "SignalContribution",
+    "TenantBranding",
+    "TenantPolicy",
+    "TenantPublic",
     "UserPublic",
     "WebAuthnCeremonyMode",
     "apply_policy",
+    "base_action",
+    "enforced_action",
     "outcome_from_action",
 ]
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"

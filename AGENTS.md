@@ -35,7 +35,7 @@ tests/test_contracts.py        # examples validate; FEATURE_NAMES parity guard
   and update `rba-features` in the same change set.
 - Do **not** accept `is_attack_ip` on `/risk/evaluate` (leakage-sensitive).
 - Do **not** put geo-distance / RTT fields on the v1 request (EDA-excluded).
-- Policy thresholds are config, not code — edit `examples/policy-config.yaml` shape,
+- Policy thresholds are config, not code — edit the `TenantPolicy` shape (`examples/tenant-policy-*.yaml`),
   not hard-coded cutoffs in services.
 - Only commit when explicitly asked; Conventional Commits; never commit secrets.
 

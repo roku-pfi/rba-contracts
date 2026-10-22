@@ -1,6 +1,7 @@
 {
+  "tenant_id": "roku-bank",
   "role_id": "role_bank_customer",
-  "application_id": "demo-banking-app",
+  "application_id": "roku-bank-web",
   "name": "customer",
   "description": "Full retail banking: view accounts and move money",
   "permission_count": 3,
@@ -8,7 +9,7 @@
   "permissions": [
     {
       "permission_id": "perm_demo_banking_app_account_read",
-      "application_id": "demo-banking-app",
+      "application_id": "roku-bank-web",
       "resource": "account",
       "operation": "read",
       "description": "See balances and account details",
@@ -16,7 +17,7 @@
     },
     {
       "permission_id": "perm_demo_banking_app_transaction_read",
-      "application_id": "demo-banking-app",
+      "application_id": "roku-bank-web",
       "resource": "transaction",
       "operation": "read",
       "description": "See the transaction history",
@@ -24,7 +25,7 @@
     },
     {
       "permission_id": "perm_demo_banking_app_transfer_create",
-      "application_id": "demo-banking-app",
+      "application_id": "roku-bank-web",
       "resource": "transfer",
       "operation": "create",
       "description": "Move money out of an account",
