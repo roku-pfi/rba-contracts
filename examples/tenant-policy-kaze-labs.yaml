@@ -1,17 +1,19 @@
 # Kaze Labs (a software company's internal portal). Adaptive from day one: a
 # usual login is password only, anything unusual gets the passkey.
 tenant_id: kaze-labs
-policy_version: "2.0.0"
+policy_version: "3.0.0"
 base_policy: PASSWORD_ONLY
 engine_mode: ACTIVE
+# D-2 (findings/2026-10-22-policy-comparison.md): a score never blocks, it steps up;
+# blocks come from rules (failed-login lockout). LOW <= 0.40 costs no detection.
 score_to_level:
-  - { max: 0.25, level: LOW }
-  - { max: 0.50, level: MEDIUM }
-  - { max: 0.75, level: HIGH }
+  - { max: 0.40, level: LOW }
+  - { max: 0.60, level: MEDIUM }
+  - { max: 0.80, level: HIGH }
   - { max: 1.00, level: CRITICAL }
 level_to_action:
   LOW: ALLOW
   MEDIUM: REQUIRE_MFA
   HIGH: REAUTHENTICATE
-  CRITICAL: BLOCK
+  CRITICAL: REAUTHENTICATE
 fallback_action: REQUIRE_MFA

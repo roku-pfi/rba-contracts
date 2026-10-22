@@ -133,9 +133,11 @@ def test_tenant_policy_examples_match_schema(name: str) -> None:
 
 def test_apply_policy_bands_and_fallback() -> None:
     bank = TenantPolicy.model_validate(_tenant_policy("roku-bank"))
-    assert apply_policy(0.10, bank) == (RiskLevel.LOW, Action.ALLOW)
-    assert apply_policy(0.61, bank) == (RiskLevel.HIGH, Action.REAUTHENTICATE)
-    assert apply_policy(0.75, bank) == (RiskLevel.CRITICAL, Action.BLOCK)
+    assert apply_policy(0.35, bank) == (RiskLevel.LOW, Action.ALLOW)
+    assert apply_policy(0.55, bank) == (RiskLevel.MEDIUM, Action.REQUIRE_MFA)
+    assert apply_policy(0.75, bank) == (RiskLevel.HIGH, Action.REAUTHENTICATE)
+    # D-2: a score never blocks; the top band steps up too (blocks come from rules).
+    assert apply_policy(0.95, bank) == (RiskLevel.CRITICAL, Action.REAUTHENTICATE)
     # Scorer failure: the fallback action at the lowest level that maps to it.
     assert apply_policy(0.0, bank, fallback=True) == (RiskLevel.MEDIUM, Action.REQUIRE_MFA)
 
@@ -163,7 +165,7 @@ def test_platform_tenant_always_asks_for_a_passkey() -> None:
     _, verdict = apply_policy(0.0, platform)
     assert enforced_action(verdict, platform) == Action.REQUIRE_MFA
     _, verdict = apply_policy(0.99, platform)
-    assert enforced_action(verdict, platform) == Action.BLOCK
+    assert enforced_action(verdict, platform) == Action.REAUTHENTICATE
 
 
 def test_policy_rejects_unsorted_bands() -> None:
