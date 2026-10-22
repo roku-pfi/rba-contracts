@@ -23,6 +23,9 @@ class LoginOutcome(str, Enum):
     """What the IdP tells the client after credentials (and later, after the PDP).
 
     ``ACCESS_DENIED`` is IdP-7 authz (no group grant), not a PDP ``BLOCK``.
+    ``SECOND_FACTOR_MISSING``: a step-up was required and the user has no
+    passkey. Never turned into an enrollment (ADR-0037); the user is sent to
+    support for an activation code.
     """
 
     AUTHENTICATED = "AUTHENTICATED"
@@ -31,6 +34,7 @@ class LoginOutcome(str, Enum):
     BLOCKED = "BLOCKED"
     INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
     ACCESS_DENIED = "ACCESS_DENIED"
+    SECOND_FACTOR_MISSING = "SECOND_FACTOR_MISSING"
 
 
 def outcome_from_action(action: Action) -> LoginOutcome:
@@ -117,6 +121,9 @@ class LoginResponse(BaseModel):
         default=None,
         description="Full callback URL with one-time code when the app has a redirect_uri.",
     )
+    # ADR-0037: this session came from a low-risk login of a user with no
+    # passkey, so it may enroll one (POST /passkeys/options) for a few minutes.
+    passkey_offer: bool = False
 
 
 class MfaVerifyRequest(BaseModel):
@@ -164,6 +171,54 @@ class MfaWebAuthnVerifyRequest(BaseModel):
         description="JSON from navigator.credentials with ArrayBuffers as base64url.",
     )
     redirect_uri: str | None = Field(default=None, min_length=1)
+
+
+class PasskeyOptionsResponse(BaseModel):
+    """Creation options for enrolling a passkey from a trusted context (ADR-0037)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    public_key: dict[str, Any] = Field(
+        description="WebAuthn PublicKeyCredentialCreationOptions JSON (base64url buffers).",
+    )
+
+
+class PasskeyVerifyRequest(BaseModel):
+    """POST /passkeys/verify — finish enrolling after a low-risk login (Bearer)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    credential: dict[str, Any]
+
+
+class ActivationOptionsRequest(BaseModel):
+    """POST /activate/options — start enrolling with an operator-issued code.
+
+    The code alone is not enough: the user's password is checked too, so a
+    leaked code without the password (or the reverse) enrolls nothing.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1)
+
+
+class ActivationVerifyRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(min_length=1, max_length=64)
+    credential: dict[str, Any]
+
+
+class ActivationCodeResponse(BaseModel):
+    """Shown once to the operator who issued it; only its hash is stored."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: str = Field(min_length=1)
+    code: str = Field(min_length=1)
+    expires_at: datetime
 
 
 class CallbackTokenRequest(BaseModel):

@@ -4,7 +4,9 @@ Versioned **API / event / feature / model / policy** contracts for the RBA
 polyrepo. This library exists to defeat **contract drift** between services —
 the counterpart of `rba-features` defeating train/serve skew.
 
-Package version: **0.9.0** — multi-tenant (ADR-0033): `tenant_id` on evaluate,
+Package version: **0.10.0** — passkey enrollment from a trusted context
+(ADR-0037): `SECOND_FACTOR_MISSING`, `passkey_offer`, activation-code and
+passkey-enrollment models. **0.9.0** — multi-tenant (ADR-0033): `tenant_id` on evaluate,
 decision and event; one `TenantPolicy` per tenant with `base_policy` and
 `engine_mode`; the response separates the engine's verdict (`action`) from what
 the PEP applies (`enforced_action`, ADR-0034). Earlier: WebAuthn (0.6.0), RBAC (0.8.0).

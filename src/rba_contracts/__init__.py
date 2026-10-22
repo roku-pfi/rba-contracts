@@ -40,6 +40,9 @@ from rba_contracts.model import (
     SignalContribution,
 )
 from rba_contracts.idp import (
+    ActivationCodeResponse,
+    ActivationOptionsRequest,
+    ActivationVerifyRequest,
     CallbackTokenRequest,
     CallbackTokenResponse,
     ConsoleLoginRequest,
@@ -50,6 +53,8 @@ from rba_contracts.idp import (
     MfaWebAuthnOptionsRequest,
     MfaWebAuthnOptionsResponse,
     MfaWebAuthnVerifyRequest,
+    PasskeyOptionsResponse,
+    PasskeyVerifyRequest,
     SessionResponse,
     SessionToken,
     UserPublic,
@@ -67,6 +72,9 @@ from rba_contracts.policy import (
 
 __all__ = [
     "Action",
+    "ActivationCodeResponse",
+    "ActivationOptionsRequest",
+    "ActivationVerifyRequest",
     "AddGroupMemberRequest",
     "AddGroupRoleRequest",
     "AdminUserPublic",
@@ -105,6 +113,8 @@ __all__ = [
     "MfaWebAuthnVerifyRequest",
     "ModelArtifactMetadata",
     "ModelPrediction",
+    "PasskeyOptionsResponse",
+    "PasskeyVerifyRequest",
     "PatchApplicationRequest",
     "PatchGroupRequest",
     "PatchRoleRequest",
