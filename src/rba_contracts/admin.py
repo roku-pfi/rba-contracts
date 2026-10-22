@@ -25,6 +25,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from rba_contracts.enums import Action, EngineMode, RiskLevel
 from rba_contracts.evaluate import Reason
+from rba_contracts.events import LoginEventSnapshot
+from rba_contracts.features import FeatureVectorV1
 
 
 # ---------------------------------------------------------------- tenants
@@ -360,6 +362,11 @@ class DecisionRecord(BaseModel):
     policy_version: str = Field(min_length=1)
     feature_schema_version: str = Field(min_length=1)
     fallback: bool = False
+    # What the login looked like and what the model compared it with: where
+    # from, which network and device, and which of those were familiar.
+    # Optional: records written before 0.13.0 lack them.
+    login: LoginEventSnapshot | None = None
+    features: FeatureVectorV1 | None = None
 
 
 class DecisionListResponse(BaseModel):

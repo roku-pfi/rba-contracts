@@ -537,22 +537,29 @@ components:
       required:
         - event_id
         - occurred_at
+        - tenant_id
         - application_id
         - user_id
         - risk_score
         - risk_level
         - action
+        - enforced_action
+        - engine_mode
         - model_version
         - policy_version
         - feature_schema_version
       properties:
         event_id: { type: string, format: uuid }
         occurred_at: { type: string, format: date-time }
+        tenant_id: { type: string }
         application_id: { type: string }
         user_id: { type: string }
         risk_score: { type: number, minimum: 0, maximum: 1 }
         risk_level: { type: string, enum: [LOW, MEDIUM, HIGH, CRITICAL] }
-        action: { type: string, enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK] }
+        action: { type: string, enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK], description: "The engine's verdict." }
+        enforced_action: { type: string, enum: [ALLOW, REQUIRE_MFA, REAUTHENTICATE, BLOCK], description: "What was applied (ADR-0034)." }
+        engine_mode: { type: string, enum: [OFF, MONITOR, ACTIVE] }
+        simulated: { type: boolean, default: false }
         reasons:
           type: array
           items:
@@ -561,6 +568,41 @@ components:
         policy_version: { type: string }
         feature_schema_version: { type: string }
         fallback: { type: boolean, default: false }
+        login:
+          nullable: true
+          description: "The login as observed: where from, which network and device (0.13.0)."
+          allOf: [{ $ref: "#/components/schemas/LoginSnapshot" }]
+        features:
+          nullable: true
+          description: "What the model compared it with: which signals were familiar (0.13.0)."
+          allOf: [{ $ref: "#/components/schemas/FeatureVectorV1" }]
+    LoginSnapshot:
+      type: object
+      additionalProperties: false
+      required: [login_timestamp, ip_address]
+      properties:
+        login_timestamp: { type: string, format: date-time }
+        ip_address: { type: string }
+        asn: { type: string, nullable: true }
+        country: { type: string, nullable: true }
+        device_type: { type: string, nullable: true }
+        os: { type: string, nullable: true }
+        browser: { type: string, nullable: true }
+        login_successful: { type: boolean, default: true }
+    FeatureVectorV1:
+      type: object
+      additionalProperties: false
+      properties:
+        user_login_count: { type: integer, minimum: 0 }
+        ip_seen_before: { type: integer, enum: [0, 1] }
+        asn_seen_before: { type: integer, enum: [0, 1] }
+        country_seen_before: { type: integer, enum: [0, 1] }
+        device_type_seen_before: { type: integer, enum: [0, 1] }
+        os_seen_before: { type: integer, enum: [0, 1] }
+        browser_seen_before: { type: integer, enum: [0, 1] }
+        hour_seen_before: { type: integer, enum: [0, 1] }
+        seconds_since_last_login: { type: number }
+        failed_logins_last_24h: { type: integer, minimum: 0 }
     DecisionListResponse:
       type: object
       additionalProperties: false
