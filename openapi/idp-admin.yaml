@@ -438,6 +438,7 @@ components:
       required: [application_id, name, enabled, created_at]
       properties:
         application_id: { type: string }
+        client_id: { type: string, nullable: true, description: "Public, opaque id for login URLs (0.14.0)" }
         name: { type: string }
         enabled: { type: boolean }
         created_at: { type: string, format: date-time }

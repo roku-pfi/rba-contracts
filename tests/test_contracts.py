@@ -331,3 +331,17 @@ def test_access_denied_is_an_idp_outcome_not_a_pdp_action() -> None:
     )
     assert resp.action is None
     assert LoginOutcome.ACCESS_DENIED.value == "ACCESS_DENIED"
+
+
+def test_a_login_names_its_application_exactly_once() -> None:
+    import pytest
+    from pydantic import ValidationError
+
+    from rba_contracts import LoginRequest
+
+    base = {"email": "a@b.example", "password": "x", "ip_address": "203.0.113.1"}
+    assert LoginRequest(**base, client_id="rk_abc").client_id == "rk_abc"
+    assert LoginRequest(**base, application_id="roku-bank-web").application_id == "roku-bank-web"
+    for bad in ({}, {"client_id": "rk_abc", "application_id": "roku-bank-web"}):
+        with pytest.raises(ValidationError):
+            LoginRequest(**base, **bad)

@@ -13,7 +13,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from rba_contracts.enums import Action, RiskLevel
 from rba_contracts.evaluate import Reason
@@ -54,7 +54,11 @@ class LoginRequest(BaseModel):
 
     email: str = Field(min_length=1)
     password: str = Field(min_length=1)
-    application_id: str = Field(min_length=1)
+    # Which application the person is signing in to: its public, opaque
+    # client_id (what browsers and apps use, 0.14.0), or the internal
+    # application_id (server-side callers). Exactly one.
+    client_id: str | None = Field(default=None, min_length=1, max_length=64)
+    application_id: str | None = Field(default=None, min_length=1)
     ip_address: str = Field(min_length=1)
     asn: str | None = None
     country: str | None = None
@@ -71,6 +75,12 @@ class LoginRequest(BaseModel):
     # cloud), `country`/`asn` above are ignored unless this signed ticket from
     # POST /simulation/ticket carries them. The decision is marked simulated.
     simulation_ticket: str | None = Field(default=None, min_length=1, max_length=512)
+
+    @model_validator(mode="after")
+    def _one_application(self) -> LoginRequest:
+        if (self.client_id is None) == (self.application_id is None):
+            raise ValueError("exactly one of client_id or application_id is required")
+        return self
 
 
 class SimulationTicketRequest(BaseModel):

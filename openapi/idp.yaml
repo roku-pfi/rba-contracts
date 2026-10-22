@@ -215,7 +215,8 @@ components:
     LoginRequest:
       type: object
       additionalProperties: false
-      required: [email, password, application_id, ip_address]
+      required: [email, password, ip_address]
+      description: Exactly one of client_id or application_id.
       properties:
         email:
           type: string
@@ -224,9 +225,14 @@ components:
           type: string
           minLength: 1
           description: Never echoed on responses.
+        client_id:
+          type: string
+          maxLength: 64
+          description: The application's public, opaque id (e.g. rk_…), as in login URLs (0.14.0).
         application_id:
           type: string
           minLength: 1
+          description: The internal id, for server-side callers.
         ip_address:
           type: string
           minLength: 1

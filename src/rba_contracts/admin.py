@@ -115,6 +115,8 @@ class ApplicationPublic(BaseModel):
 
     tenant_id: str = Field(min_length=1)
     application_id: str = Field(min_length=1)
+    # The public, opaque id an application puts in login URLs (0.14.0).
+    client_id: str | None = None
     name: str = Field(min_length=1)
     enabled: bool
     created_at: datetime
