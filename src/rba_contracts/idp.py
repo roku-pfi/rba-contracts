@@ -67,6 +67,26 @@ class LoginRequest(BaseModel):
         min_length=1,
         description="Registered client callback (Demo-2). Not OIDC.",
     )
+    # ADR-0032: where the IdP does not trust client-reported signals (the
+    # cloud), `country`/`asn` above are ignored unless this signed ticket from
+    # POST /simulation/ticket carries them. The decision is marked simulated.
+    simulation_ticket: str | None = Field(default=None, min_length=1, max_length=512)
+
+
+class SimulationTicketRequest(BaseModel):
+    """POST /simulation/ticket — presenter only (shared secret header)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    country: str | None = Field(default=None, min_length=2, max_length=2)
+    asn: str | None = Field(default=None, min_length=1, max_length=16)
+
+
+class SimulationTicketResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ticket: str = Field(min_length=1)
+    expires_at: datetime
 
 
 class ConsoleLoginRequest(BaseModel):
