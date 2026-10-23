@@ -58,6 +58,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DecisionListResponse"
+  /decisions/summary:
+    get:
+      tags: [audit]
+      operationId: summarizeDecisions
+      description: A tenant's decisions counted in the store, for the console's Resumen.
+      parameters:
+        - in: query
+          name: tenant_id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: days
+          schema: { type: integer, minimum: 1, maximum: 31, default: 7 }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionSummary"
   /decisions/{event_id}:
     get:
       tags: [audit]
@@ -86,6 +105,35 @@ components:
         signal: { type: string }
         contribution: { type: number }
         detail: { type: string }
+    DecisionSummary:
+      type: object
+      additionalProperties: false
+      required: [since, total, by_action, saved_prompts, hours, countries]
+      properties:
+        since: { type: string, format: date-time }
+        total: { type: integer, minimum: 0 }
+        by_action:
+          type: object
+          additionalProperties: { type: integer }
+        saved_prompts: { type: integer, minimum: 0, description: "MONITOR: engine ALLOW, base policy stepped up." }
+        hours:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [hour, counts]
+            properties:
+              hour: { type: string, format: date-time }
+              counts: { type: object, additionalProperties: { type: integer } }
+        countries:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [country, count]
+            properties:
+              country: { type: string }
+              count: { type: integer, minimum: 0 }
     DecisionRecord:
       type: object
       additionalProperties: false

@@ -379,3 +379,36 @@ class DecisionListResponse(BaseModel):
 
     items: list[DecisionRecord]
     count: int = Field(ge=0)
+
+
+class HourCount(BaseModel):
+    """Decisions in one UTC hour, by enforced action. The console folds hours
+    into its own local days."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    hour: datetime
+    counts: dict[str, int]
+
+
+class CountryCount(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    country: str
+    count: int = Field(ge=0)
+
+
+class DecisionSummary(BaseModel):
+    """A tenant's decisions since ``since``, counted in the store (the console's
+    Resumen). Replaces counting the newest 200 records in the browser, which a
+    single load test filled."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    since: datetime
+    total: int = Field(ge=0)
+    by_action: dict[str, int]
+    # MONITOR: the engine would have allowed, the base policy asked for a step-up.
+    saved_prompts: int = Field(ge=0)
+    hours: list[HourCount]
+    countries: list[CountryCount]
