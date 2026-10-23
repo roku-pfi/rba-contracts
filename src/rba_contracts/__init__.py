@@ -74,6 +74,7 @@ from rba_contracts.idp import (
 )
 from rba_contracts.policy import (
     LevelToAction,
+    LockoutPolicy,
     ScoreBand,
     TenantPolicy,
     apply_policy,
@@ -119,6 +120,7 @@ __all__ = [
     "GroupPublic",
     "GroupRolePublic",
     "LevelToAction",
+    "LockoutPolicy",
     "LoginEventSnapshot",
     "LoginOutcome",
     "LoginRequest",

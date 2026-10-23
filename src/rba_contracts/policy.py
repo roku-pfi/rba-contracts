@@ -32,6 +32,29 @@ class LevelToAction(BaseModel):
         return getattr(self, level.value)
 
 
+class LockoutPolicy(BaseModel):
+    """Repeated wrong passwords (ADR-0045): stop the source, not the account.
+
+    Failures from an IP count against that IP across the tenant's users; past
+    ``ip_failures`` in ``ip_window_seconds`` every attempt from it is blocked
+    for ``ip_block_seconds``, the right password included. Failures from a
+    context the user has never used are an attack on them, not their mistake:
+    past ``foreign_failures_step_up`` in a day their next login must pass the
+    passkey, never a block. Only the owner's own run of failures, from a
+    network they use, pauses the account for ``owner_cooldown_seconds``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    ip_failures: int = Field(default=10, ge=1)
+    ip_window_seconds: int = Field(default=900, ge=1)
+    ip_block_seconds: int = Field(default=1800, ge=1)
+    foreign_failures_step_up: int = Field(default=3, ge=1)
+    owner_failures: int = Field(default=5, ge=1)
+    owner_window_seconds: int = Field(default=900, ge=1)
+    owner_cooldown_seconds: int = Field(default=900, ge=1)
+
+
 class TenantPolicy(BaseModel):
     """Everything that decides a login for one tenant. Editable without redeploy (RNF-05)."""
 
@@ -47,6 +70,7 @@ class TenantPolicy(BaseModel):
     level_to_action: LevelToAction
     # When the scorer or the profile store fails inside the PDP.
     fallback_action: Action
+    lockout: LockoutPolicy = Field(default_factory=LockoutPolicy)
 
     @model_validator(mode="after")
     def _bands_sorted_and_cover(self) -> TenantPolicy:

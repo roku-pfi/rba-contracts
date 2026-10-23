@@ -332,6 +332,20 @@ components:
           $ref: "#/components/schemas/LevelToAction"
         fallback_action:
           $ref: "#/components/schemas/Action"
+        lockout:
+          $ref: "#/components/schemas/LockoutPolicy"
+    LockoutPolicy:
+      type: object
+      additionalProperties: false
+      description: "Repeated wrong passwords (ADR-0045): block the source IP, step up the account, pause it only for the owner's own failures."
+      properties:
+        ip_failures: { type: integer, minimum: 1, default: 10 }
+        ip_window_seconds: { type: integer, minimum: 1, default: 900 }
+        ip_block_seconds: { type: integer, minimum: 1, default: 1800 }
+        foreign_failures_step_up: { type: integer, minimum: 1, default: 3 }
+        owner_failures: { type: integer, minimum: 1, default: 5 }
+        owner_window_seconds: { type: integer, minimum: 1, default: 900 }
+        owner_cooldown_seconds: { type: integer, minimum: 1, default: 900 }
     Error:
       type: object
       additionalProperties: false
