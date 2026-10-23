@@ -569,6 +569,10 @@ components:
         policy_version: { type: string }
         feature_schema_version: { type: string }
         fallback: { type: boolean, default: false }
+        step_up_passed_at:
+          type: [string, "null"]
+          format: date-time
+          description: When the user passed the step-up this decision asked for (RF-11). Null if none was asked or it was not passed.
         login:
           nullable: true
           description: "The login as observed: where from, which network and device (0.13.0)."

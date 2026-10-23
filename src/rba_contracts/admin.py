@@ -369,6 +369,9 @@ class DecisionRecord(BaseModel):
     # Optional: records written before 0.13.0 lack them.
     login: LoginEventSnapshot | None = None
     features: FeatureVectorV1 | None = None
+    # When the user passed the step-up this decision asked for (RF-11 / RF-18).
+    # None: no step-up, or not passed (abandoned, or an attacker without it).
+    step_up_passed_at: datetime | None = None
 
 
 class DecisionListResponse(BaseModel):
