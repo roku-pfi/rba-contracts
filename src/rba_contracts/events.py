@@ -68,3 +68,44 @@ class DecisionMadeEvent(BaseModel):
     reasons: list[Reason] = Field(default_factory=list)
     features: FeatureVectorV1 | None = None
     login: LoginEventSnapshot | None = None
+
+
+LOGIN_CONFIRMED_CHANNEL = "rba.login.confirmed.v1"
+
+
+class LoginConfirmRequest(BaseModel):
+    """IdP → PDP (`POST /risk/confirm`): the step-up of this decision was passed."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    event_id: UUID = Field(description="The decision's event_id, from /risk/evaluate.")
+    tenant_id: str = Field(min_length=1)
+
+
+class LoginConfirmResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    event_id: UUID
+    # False when the decision did not wait for a step-up (ALLOW was learned at
+    # once; BLOCK and failed passwords are never learned) or was already confirmed.
+    confirmed: bool
+
+
+class LoginConfirmedEvent(BaseModel):
+    """A challenged login was completed: the user passed the step-up.
+
+    The profile learns a login's context only from a login that ended in a
+    session: at once for an enforced ALLOW, on this event for a step-up. A
+    step-up nobody passes (an attacker with the password but not the passkey)
+    teaches the profile nothing. Consumers MUST be idempotent on event_id.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    event_id: UUID = Field(description="This event's id: uuid5 of the decision, so one per decision.")
+    decision_event_id: UUID
+    occurred_at: datetime
+    tenant_id: str = Field(min_length=1)
+    application_id: str
+    user_id: str
+    login: LoginEventSnapshot

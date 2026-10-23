@@ -110,6 +110,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+
+  /risk/confirm:
+    post:
+      tags: [risk]
+      operationId: confirmLogin
+      summary: Report that the step-up of a decision was passed
+      description: |
+        Called by the IdP after the user passes the step-up the decision asked
+        for. The PDP emits `rba.login.confirmed.v1` with the decision's login
+        snapshot, and profile-service learns that context. Only a decision whose
+        enforced action was REQUIRE_MFA or REAUTHENTICATE can be confirmed, once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [event_id, tenant_id]
+              properties:
+                event_id: { type: string, format: uuid }
+                tenant_id: { type: string }
+      responses:
+        "200":
+          description: "`confirmed` is false when there was nothing to confirm."
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [event_id, confirmed]
+                properties:
+                  event_id: { type: string, format: uuid }
+                  confirmed: { type: boolean }
+        "404":
+          description: No decision with that event_id in that tenant
 components:
   schemas:
     Action:

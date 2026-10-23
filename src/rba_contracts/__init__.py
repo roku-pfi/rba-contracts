@@ -32,7 +32,15 @@ from rba_contracts.admin import (
 )
 from rba_contracts.enums import Action, BasePolicy, EngineMode, RiskLevel
 from rba_contracts.evaluate import Reason, RiskEvaluateRequest, RiskEvaluateResponse
-from rba_contracts.events import DECISION_MADE_CHANNEL, DecisionMadeEvent, LoginEventSnapshot
+from rba_contracts.events import (
+    DECISION_MADE_CHANNEL,
+    LOGIN_CONFIRMED_CHANNEL,
+    DecisionMadeEvent,
+    LoginConfirmedEvent,
+    LoginConfirmRequest,
+    LoginConfirmResponse,
+    LoginEventSnapshot,
+)
 from rba_contracts.features import FEATURE_NAMES, FEATURE_SCHEMA_VERSION, FeatureVectorV1
 from rba_contracts.model import (
     FREEMAN_FEATURES,
@@ -93,6 +101,10 @@ __all__ = [
     "CreateTenantRequest",
     "CreateUserRequest",
     "DECISION_MADE_CHANNEL",
+    "LOGIN_CONFIRMED_CHANNEL",
+    "LoginConfirmedEvent",
+    "LoginConfirmRequest",
+    "LoginConfirmResponse",
     "DecisionListResponse",
     "DecisionMadeEvent",
     "DecisionRecord",
@@ -149,4 +161,4 @@ __all__ = [
     "outcome_from_action",
 ]
 
-__version__ = "0.14.0"
+__version__ = "0.15.0"

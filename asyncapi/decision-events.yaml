@@ -20,8 +20,38 @@ channels:
       summary: Consumed by profile-service, audit-service, analytics, …
       message:
         $ref: "#/components/messages/DecisionMade"
+  rba.login.confirmed.v1:
+    description: |
+      A challenged login was completed (the user passed the step-up). The PDP
+      emits it when the IdP calls `POST /risk/confirm`. profile-service learns
+      the login's context from it; a step-up nobody passes is never learned.
+    publish:
+      operationId: publishLoginConfirmed
+      message:
+        $ref: "#/components/messages/LoginConfirmed"
+    subscribe:
+      operationId: consumeLoginConfirmed
+      summary: Consumed by profile-service
+      message:
+        $ref: "#/components/messages/LoginConfirmed"
 components:
   messages:
+    LoginConfirmed:
+      name: LoginConfirmed
+      title: Login confirmed by step-up
+      contentType: application/json
+      payload:
+        type: object
+        additionalProperties: false
+        required: [event_id, decision_event_id, occurred_at, tenant_id, application_id, user_id, login]
+        properties:
+          event_id: { type: string, format: uuid, description: "uuid5 of the decision: one per decision." }
+          decision_event_id: { type: string, format: uuid }
+          occurred_at: { type: string, format: date-time }
+          tenant_id: { type: string }
+          application_id: { type: string }
+          user_id: { type: string }
+          login: { type: object, description: "LoginEventSnapshot of the decision." }
     DecisionMade:
       name: DecisionMade
       title: Decision made

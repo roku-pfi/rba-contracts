@@ -25,6 +25,8 @@ from rba_contracts import (
     DecisionMadeEvent,
     DecisionRecord,
     FeatureVectorV1,
+    LoginConfirmedEvent,
+    LoginConfirmRequest,
     LoginOutcome,
     LoginRequest,
     LoginResponse,
@@ -118,6 +120,13 @@ def test_decision_made_event_example() -> None:
     event = DecisionMadeEvent.model_validate(_load_json("decision-made-event.json"))
     assert event.features is not None
     assert event.features.device_type_seen_before == 0
+
+
+def test_login_confirmed_event_example() -> None:
+    event = LoginConfirmedEvent.model_validate(_load_json("login-confirmed-event.json"))
+    assert event.event_id != event.decision_event_id
+    assert event.login.login_successful is True
+    LoginConfirmRequest(event_id=event.decision_event_id, tenant_id=event.tenant_id)
 
 
 def _tenant_policy(name: str) -> dict:
