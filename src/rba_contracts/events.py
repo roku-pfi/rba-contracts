@@ -1,4 +1,4 @@
-"""Async bus payloads (transactional outbox → RabbitMQ)."""
+"""Async bus payloads (decision journal → RabbitMQ, ADR-0044)."""
 
 from __future__ import annotations
 
