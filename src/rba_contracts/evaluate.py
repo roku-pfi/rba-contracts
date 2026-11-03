@@ -38,7 +38,9 @@ class RiskEvaluateRequest(BaseModel):
     browser: str | None = None
     login_successful: bool = True
     user_agent: str | None = None
-    device_id: str | None = None
+    # RF-02 (ADR-0047): the IdP's per-tenant hash of its device cookie. Absent
+    # on a browser's first visit and for non-browser callers.
+    device_id: str | None = Field(default=None, min_length=1, max_length=64)
     # ADR-0032: country/ASN came from the presenter override, not from the
     # client's address. Scored normally; flagged on the record.
     simulated: bool = False
@@ -54,6 +56,7 @@ class RiskEvaluateRequest(BaseModel):
             "os": self.os,
             "browser": self.browser,
             "login_successful": self.login_successful,
+            "device_id": self.device_id,
         }
 
 

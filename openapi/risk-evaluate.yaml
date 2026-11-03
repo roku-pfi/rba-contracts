@@ -226,7 +226,10 @@ components:
           description: Optional raw UA; not consumed by FeatureVectorV1.
         device_id:
           type: string
-          description: Optional stable device id; not consumed by FeatureVectorV1.
+          maxLength: 64
+          description: >-
+            RF-02 (ADR-0047). The IdP's per-tenant hash of its device cookie;
+            absent on a first visit. Scored as "known device", not by FeatureVectorV1.
         simulated:
           type: boolean
           default: false

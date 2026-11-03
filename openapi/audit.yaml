@@ -196,6 +196,7 @@ components:
         os: { type: string, nullable: true }
         browser: { type: string, nullable: true }
         login_successful: { type: boolean, default: true }
+        device_id: { type: string, nullable: true, description: "RF-02: per-tenant device hash (ADR-0047)" }
     FeatureVectorV1:
       type: object
       additionalProperties: false

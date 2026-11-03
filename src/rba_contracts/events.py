@@ -31,6 +31,8 @@ class LoginEventSnapshot(BaseModel):
     os: str | None = None
     browser: str | None = None
     login_successful: bool = True
+    # RF-02 (ADR-0047): the IdP's per-tenant device hash, learned with the login.
+    device_id: str | None = Field(default=None, min_length=1, max_length=64)
 
     def to_feature_event(self) -> dict[str, object]:
         return {
@@ -42,6 +44,7 @@ class LoginEventSnapshot(BaseModel):
             "os": self.os,
             "browser": self.browser,
             "login_successful": self.login_successful,
+            "device_id": self.device_id,
         }
 
 
