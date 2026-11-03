@@ -230,6 +230,12 @@ components:
           description: >-
             RF-02 (ADR-0047). The IdP's per-tenant hash of its device cookie;
             absent on a first visit. Scored as "known device", not by FeatureVectorV1.
+        step_up_required:
+          type: boolean
+          default: false
+          description: >-
+            RF-08 (ADR-0048). The user or application always asks for the passkey:
+            the enforced action is at least REQUIRE_MFA, with reason always_passkey.
         simulated:
           type: boolean
           default: false

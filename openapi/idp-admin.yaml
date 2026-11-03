@@ -410,6 +410,7 @@ components:
           items: { $ref: "#/components/schemas/GroupRef" }
         passkeys: { type: integer, minimum: 0, description: "Registered passkeys; 0 means a step-up cannot succeed (ADR-0037)" }
         last_login_at: { type: string, format: date-time, nullable: true }
+        always_passkey: { type: boolean, default: false, description: "RF-08: every login asks for the passkey (ADR-0048)" }
     GroupRef:
       type: object
       additionalProperties: false
@@ -432,6 +433,7 @@ components:
         enabled: { type: boolean }
         is_admin: { type: boolean }
         password: { type: string, minLength: 1 }
+        always_passkey: { type: boolean }
     ApplicationPublic:
       type: object
       additionalProperties: false
@@ -443,6 +445,7 @@ components:
         enabled: { type: boolean }
         created_at: { type: string, format: date-time }
         redirect_uri: { type: string }
+        always_passkey: { type: boolean, default: false, description: "RF-08: every login asks for the passkey (ADR-0048)" }
     CreateApplicationRequest:
       type: object
       additionalProperties: false
@@ -458,6 +461,7 @@ components:
         name: { type: string }
         enabled: { type: boolean }
         redirect_uri: { type: string }
+        always_passkey: { type: boolean }
     GroupMemberPublic:
       type: object
       additionalProperties: false

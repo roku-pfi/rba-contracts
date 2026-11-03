@@ -124,6 +124,8 @@ class ApplicationPublic(BaseModel):
         default=None,
         description="Thin callback URL for AUTHENTICATED (ADR-0024). Not OIDC.",
     )
+    # RF-08 (ADR-0048): every login to this application asks for the passkey.
+    always_passkey: bool = False
 
 
 class CreateApplicationRequest(BaseModel):
@@ -140,10 +142,16 @@ class PatchApplicationRequest(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=256)
     enabled: bool | None = None
     redirect_uri: str | None = Field(default=None, max_length=512)
+    always_passkey: bool | None = None
 
     @model_validator(mode="after")
     def _at_least_one(self) -> PatchApplicationRequest:
-        if self.name is None and self.enabled is None and self.redirect_uri is None:
+        if (
+            self.name is None
+            and self.enabled is None
+            and self.redirect_uri is None
+            and self.always_passkey is None
+        ):
             raise ValueError("at least one field is required")
         return self
 
@@ -171,6 +179,8 @@ class AdminUserPublic(BaseModel):
     groups: list[GroupRef] = Field(default_factory=list)
     passkeys: int = Field(default=0, ge=0)
     last_login_at: datetime | None = None
+    # RF-08 (ADR-0048): every login of this user asks for the passkey.
+    always_passkey: bool = False
 
 
 class CreateUserRequest(BaseModel):
@@ -187,10 +197,16 @@ class PatchUserRequest(BaseModel):
     enabled: bool | None = None
     is_admin: bool | None = None
     password: str | None = Field(default=None, min_length=1)
+    always_passkey: bool | None = None
 
     @model_validator(mode="after")
     def _at_least_one(self) -> PatchUserRequest:
-        if self.enabled is None and self.is_admin is None and self.password is None:
+        if (
+            self.enabled is None
+            and self.is_admin is None
+            and self.password is None
+            and self.always_passkey is None
+        ):
             raise ValueError("at least one field is required")
         return self
 

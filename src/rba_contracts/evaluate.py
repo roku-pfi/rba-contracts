@@ -41,6 +41,10 @@ class RiskEvaluateRequest(BaseModel):
     # RF-02 (ADR-0047): the IdP's per-tenant hash of its device cookie. Absent
     # on a browser's first visit and for non-browser callers.
     device_id: str | None = Field(default=None, min_length=1, max_length=64)
+    # RF-08 (ADR-0048): the user or the application always asks for the
+    # passkey. The PDP floors the enforced action at REQUIRE_MFA and says why;
+    # its own verdict (``action``) is left as the engine judged the login.
+    step_up_required: bool = False
     # ADR-0032: country/ASN came from the presenter override, not from the
     # client's address. Scored normally; flagged on the record.
     simulated: bool = False

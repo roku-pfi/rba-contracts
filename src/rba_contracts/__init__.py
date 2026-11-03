@@ -169,4 +169,4 @@ __all__ = [
     "outcome_from_action",
 ]
 
-__version__ = "0.20.0"
+__version__ = "0.21.0"
