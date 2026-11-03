@@ -306,6 +306,15 @@ components:
         redirect_to:
           type: string
           description: Callback URL with a one-time `code` query param (Demo-2).
+        passkey_offer:
+          type: boolean
+          description: The session may enroll one passkey for a few minutes (ADR-0037).
+        unusual:
+          type: boolean
+          description: >-
+            RF-17. The engine found the login unusual and asked for the step-up.
+            Public responses carry no score, level, action or reasons beyond the
+            owner's own cooldown.
     MfaVerifyRequest:
       type: object
       additionalProperties: false

@@ -133,6 +133,10 @@ class LoginResponse(BaseModel):
 
     IdP-2 may return only ``outcome`` (+ ``user_id`` on success). Risk fields
     appear at IdP-3; ``session`` / ``challenge_id`` at IdP-4.
+
+    RF-17: the IdP's public endpoints leave out ``risk_score``, ``risk_level``,
+    ``action`` and every reason but the owner's own cooldown; the browser
+    learns only ``unusual``. The detail stays in the console.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -154,6 +158,9 @@ class LoginResponse(BaseModel):
     # ADR-0037: this session came from a low-risk login of a user with no
     # passkey, so it may enroll one (POST /passkeys/options) for a few minutes.
     passkey_offer: bool = False
+    # RF-17: the engine itself found this login unusual and asked for the
+    # step-up (not a "passkey always" policy, not an engine that is down).
+    unusual: bool = False
 
 
 class MfaVerifyRequest(BaseModel):
