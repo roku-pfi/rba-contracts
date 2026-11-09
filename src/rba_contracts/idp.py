@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -128,6 +128,30 @@ class SessionToken(BaseModel):
     expires_at: datetime
 
 
+class StoppedAttempt(BaseModel):
+    """A login with the user's right password that was stopped (0.22.0).
+
+    The owner is told on their next sign-in, so they can change the password.
+    Only where and when, and what stopped it: nothing about the engine.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    occurred_at: datetime
+    country: str | None = None
+    # "passkey": a step-up nobody passed; "blocked": refused outright.
+    stopped_by: Literal["passkey", "blocked"]
+
+
+class ChangePasswordRequest(BaseModel):
+    """POST /account/password, with the session (0.22.0)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
 class LoginResponse(BaseModel):
     """POST /login and POST /mfa/verify.
 
@@ -161,6 +185,9 @@ class LoginResponse(BaseModel):
     # RF-17: the engine itself found this login unusual and asked for the
     # step-up (not a "passkey always" policy, not an engine that is down).
     unusual: bool = False
+    # Someone got the password right since the user's last visit and was
+    # stopped (0.22.0). Only on an AUTHENTICATED answer, shown once.
+    attempts: list[StoppedAttempt] = Field(default_factory=list)
 
 
 class MfaVerifyRequest(BaseModel):

@@ -61,6 +61,8 @@ from rba_contracts.idp import (
     LoginOutcome,
     LoginRequest,
     LoginResponse,
+    StoppedAttempt,
+    ChangePasswordRequest,
     MfaVerifyRequest,
     MfaWebAuthnOptionsRequest,
     MfaWebAuthnOptionsResponse,
@@ -131,6 +133,8 @@ __all__ = [
     "LoginOutcome",
     "LoginRequest",
     "LoginResponse",
+    "StoppedAttempt",
+    "ChangePasswordRequest",
     "MfaVerifyRequest",
     "MfaWebAuthnOptionsRequest",
     "MfaWebAuthnOptionsResponse",
@@ -169,4 +173,4 @@ __all__ = [
     "outcome_from_action",
 ]
 
-__version__ = "0.21.0"
+__version__ = "0.22.0"
