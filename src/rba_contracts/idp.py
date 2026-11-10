@@ -150,12 +150,54 @@ class StoppedAttempt(BaseModel):
 
 
 class ChangePasswordRequest(BaseModel):
-    """POST /account/password, with the session (0.22.0)."""
+    """POST /account/password, with the session (0.22.0).
+
+    0.25.0: confirmed with the user's passkey too (``credential``: a WebAuthn
+    assertion for the options from POST /account/password/options).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     current_password: str = Field(min_length=1)
     new_password: str = Field(min_length=8, max_length=128)
+    credential: dict[str, Any]
+
+
+class AccountLinkRequest(BaseModel):
+    """POST /account/password/link, with the app's session (0.25.0).
+
+    The app sends its user to the IdP's page to change the password there,
+    where the passkey belongs. ``return_to`` must be on the app's registered
+    origin.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    return_to: str = Field(min_length=1, max_length=512)
+
+
+class AccountLinkResponse(BaseModel):
+    """A one-time link to the IdP's password page (0.25.0)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    url: str
+    expires_at: datetime
+
+
+class AccountLinkRedeemRequest(BaseModel):
+    """POST /account/link/redeem: the IdP's page trades the link's code for its own session (0.25.0)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(min_length=1)
+
+
+class AccountLinkRedeemResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    session: SessionToken
+    return_to: str
 
 
 class LoginResponse(BaseModel):
@@ -244,12 +286,13 @@ class MfaWebAuthnVerifyRequest(BaseModel):
 
 
 class PasskeyOptionsResponse(BaseModel):
-    """Creation options for enrolling a passkey from a trusted context (ADR-0037)."""
+    """WebAuthn options: creation, to enrol a passkey from a trusted context
+    (ADR-0037); request, to confirm a password change (0.25.0)."""
 
     model_config = ConfigDict(extra="forbid")
 
     public_key: dict[str, Any] = Field(
-        description="WebAuthn PublicKeyCredentialCreationOptions JSON (base64url buffers).",
+        description="WebAuthn PublicKeyCredentialCreationOptions or RequestOptions JSON (base64url buffers).",
     )
 
 
