@@ -177,11 +177,13 @@ class AccountLinkRequest(BaseModel):
 
 
 class AccountLinkResponse(BaseModel):
-    """A one-time link to the IdP's password page (0.25.0)."""
+    """A one-time link to the IdP's password page (0.25.0): a path on the
+    IdP, which the app joins to the IdP's public address it already uses
+    for the login."""
 
     model_config = ConfigDict(extra="forbid")
 
-    url: str
+    path: str
     expires_at: datetime
 
 
