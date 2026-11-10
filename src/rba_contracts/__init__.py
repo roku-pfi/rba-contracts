@@ -13,6 +13,8 @@ from rba_contracts.admin import (
     CreateUserRequest,
     DecisionListResponse,
     DecisionSummary,
+    DecisionImpact,
+    ImpactDay,
     HourCount,
     CountryCount,
     DecisionRecord,
@@ -113,6 +115,8 @@ __all__ = [
     "LoginConfirmResponse",
     "DecisionListResponse",
     "DecisionSummary",
+    "DecisionImpact",
+    "ImpactDay",
     "HourCount",
     "CountryCount",
     "DecisionMadeEvent",
@@ -173,4 +177,4 @@ __all__ = [
     "outcome_from_action",
 ]
 
-__version__ = "0.22.0"
+__version__ = "0.23.0"

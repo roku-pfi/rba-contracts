@@ -17,7 +17,7 @@ separate ``access`` grant any more.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
@@ -428,3 +428,36 @@ class DecisionSummary(BaseModel):
     saved_prompts: int = Field(ge=0)
     hours: list[HourCount]
     countries: list[CountryCount]
+
+
+class ImpactDay(BaseModel):
+    """One day of a tenant's right-password logins, by what the engine did."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    day: date
+    allowed: int = Field(ge=0)       # in without a step
+    verified: int = Field(ge=0)      # asked for the passkey and passed it
+    stopped: int = Field(ge=0)       # asked and never passed, or blocked
+
+
+class DecisionImpact(BaseModel):
+    """What the engine did for one tenant since ``since`` (contracts 0.23.0).
+
+    Counted on the engine's verdict, so it reads the same in MONITOR (what it
+    would do) and ACTIVE. Only logins with the right password: those are the
+    ones a password alone would let in. Load-scene users are left out.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    since: datetime
+    engine_mode: str | None = None
+    right_password: int = Field(ge=0)
+    allowed: int = Field(ge=0)
+    verified: int = Field(ge=0)
+    stopped_step_up: int = Field(ge=0)   # a passkey asked and never passed
+    stopped_blocked: int = Field(ge=0)   # refused outright
+    wrong_password: int = Field(ge=0)
+    wrong_password_from_blocked_ip: int = Field(ge=0)
+    days: list[ImpactDay]
