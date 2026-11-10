@@ -90,6 +90,9 @@ class SimulationTicketRequest(BaseModel):
 
     country: str | None = Field(default=None, min_length=2, max_length=2)
     asn: str | None = Field(default=None, min_length=1, max_length=16)
+    # 0.26.0: the address too, for a login from a network the user never used
+    # (the request's own address would still be the familiar one).
+    ip_address: str | None = Field(default=None, min_length=2, max_length=45)
 
 
 class SimulationTicketResponse(BaseModel):
