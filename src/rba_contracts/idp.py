@@ -132,7 +132,8 @@ class StoppedAttempt(BaseModel):
     """A login with the user's right password that was stopped (0.22.0).
 
     The owner is told on their next sign-in, so they can change the password.
-    Only where and when, and what stopped it: nothing about the engine.
+    Where, when and from what, the way a bank lists a sign-in (0.24.0): nothing
+    about the engine. ``stopped_by`` is for the app's logic, never for display.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -141,6 +142,11 @@ class StoppedAttempt(BaseModel):
     country: str | None = None
     # "passkey": a step-up nobody passed; "blocked": refused outright.
     stopped_by: Literal["passkey", "blocked"]
+    # The attempt's own device and address, for "Ver detalles" (0.24.0).
+    ip_address: str | None = None
+    device_type: str | None = None  # desktop | mobile | tablet
+    os: str | None = None
+    browser: str | None = None
 
 
 class ChangePasswordRequest(BaseModel):
